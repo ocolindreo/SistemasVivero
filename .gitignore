@@ -1,0 +1,14 @@
+# VS Code local settings
+.vscode/
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
