@@ -8,6 +8,10 @@ const pool = require('./config/database');
 const authRoutes = require('./routes/auth.routes');
 const usuariosRoutes = require('./routes/usuarios.routes');
 const rolesRoutes = require('./routes/roles.routes');
+const estadosRoutes = require('./routes/estados.routes');
+const especiesRoutes = require('./routes/especies.routes');
+const beneficiariosRoutes = require('./routes/beneficiarios.routes');
+const areasRoutes = require('./routes/areas.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,6 +26,10 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/roles', rolesRoutes);
+app.use('/api/estados', estadosRoutes);
+app.use('/api/especies', especiesRoutes);
+app.use('/api/beneficiarios', beneficiariosRoutes);
+app.use('/api/areas', areasRoutes);
 
 // Rutas de prueba
 app.get('/', (req, res) => {
