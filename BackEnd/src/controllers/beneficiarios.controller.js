@@ -185,11 +185,10 @@ async function crearBeneficiario(req, res) {
   }
 
   const body = req.body || {};
-  const codigo = typeof body.codigo === 'string' ? body.codigo.trim().toUpperCase() : '';
   const tipo = typeof body.tipo === 'string' ? body.tipo.trim().toUpperCase() : '';
   const nombre = typeof body.nombre === 'string' ? body.nombre.trim() : '';
 
-  if (!codigo || !tipo || !nombre || !TIPOS_BENEFICIARIO.has(tipo)) {
+  if (!tipo || !nombre || !TIPOS_BENEFICIARIO.has(tipo)) {
     return res.status(400).json({
       ok: false,
       mensaje: 'Los datos requeridos son inválidos'
@@ -220,22 +219,6 @@ async function crearBeneficiario(req, res) {
   try {
     await connection.beginTransaction();
 
-    const [duplicates] = await connection.execute(
-      `SELECT ben_id
-       FROM ben_beneficiarios
-       WHERE ben_codigo = ?
-       LIMIT 1`,
-      [codigo]
-    );
-
-    if (duplicates.length > 0) {
-      await connection.rollback();
-      return res.status(409).json({
-        ok: false,
-        mensaje: 'El código de beneficiario ya se encuentra registrado'
-      });
-    }
-
     const [result] = await connection.execute(
       `INSERT INTO ben_beneficiarios (
         ben_codigo,
@@ -252,9 +235,8 @@ async function crearBeneficiario(req, res) {
         ben_direccion,
         ben_estado,
         ben_id_usuario_creacion
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+      ) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
       [
-        codigo,
         tipo,
         nombre,
         nit,
@@ -268,6 +250,15 @@ async function crearBeneficiario(req, res) {
         direccion,
         req.usuario.usu_id
       ]
+    );
+
+    const codigo = `BEN-${String(result.insertId).padStart(6, '0')}`;
+
+    await connection.execute(
+      `UPDATE ben_beneficiarios
+       SET ben_codigo = ?
+       WHERE ben_id = ?`,
+      [codigo, result.insertId]
     );
 
     await registrarAuditoria({
@@ -353,6 +344,13 @@ async function actualizarBeneficiario(req, res) {
 
   const body = req.body || {};
 
+  if (Object.prototype.hasOwnProperty.call(body, 'codigo')) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: 'El código no puede modificarse desde este endpoint'
+    });
+  }
+
   if (Object.prototype.hasOwnProperty.call(body, 'estado')) {
     return res.status(400).json({
       ok: false,
@@ -360,11 +358,10 @@ async function actualizarBeneficiario(req, res) {
     });
   }
 
-  const codigo = typeof body.codigo === 'string' ? body.codigo.trim().toUpperCase() : '';
   const tipo = typeof body.tipo === 'string' ? body.tipo.trim().toUpperCase() : '';
   const nombre = typeof body.nombre === 'string' ? body.nombre.trim() : '';
 
-  if (!codigo || !tipo || !nombre || !TIPOS_BENEFICIARIO.has(tipo)) {
+  if (!tipo || !nombre || !TIPOS_BENEFICIARIO.has(tipo)) {
     return res.status(400).json({
       ok: false,
       mensaje: 'Los datos requeridos son inválidos'
@@ -428,27 +425,9 @@ async function actualizarBeneficiario(req, res) {
 
     const current = rows[0];
 
-    const [duplicates] = await connection.execute(
-      `SELECT ben_id
-       FROM ben_beneficiarios
-       WHERE ben_codigo = ?
-         AND ben_id <> ?
-       LIMIT 1`,
-      [codigo, parsedId]
-    );
-
-    if (duplicates.length > 0) {
-      await connection.rollback();
-      return res.status(409).json({
-        ok: false,
-        mensaje: 'El código de beneficiario ya se encuentra registrado'
-      });
-    }
-
     await connection.execute(
       `UPDATE ben_beneficiarios
        SET
-        ben_codigo = ?,
         ben_tipo = ?,
         ben_nombre = ?,
         ben_nit = ?,
@@ -464,7 +443,6 @@ async function actualizarBeneficiario(req, res) {
         ben_id_usuario_modificacion = ?
        WHERE ben_id = ?`,
       [
-        codigo,
         tipo,
         nombre,
         nit,
@@ -502,7 +480,7 @@ async function actualizarBeneficiario(req, res) {
         ben_estado: current.ben_estado
       },
       newData: {
-        ben_codigo: codigo,
+        ben_codigo: current.ben_codigo,
         ben_tipo: tipo,
         ben_nombre: nombre,
         ben_nit: nit,
@@ -527,7 +505,7 @@ async function actualizarBeneficiario(req, res) {
       mensaje: 'Beneficiario actualizado correctamente',
       beneficiario: {
         id: parsedId,
-        codigo,
+        codigo: current.ben_codigo,
         tipo,
         nombre,
         nit,

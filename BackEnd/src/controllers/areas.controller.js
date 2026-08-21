@@ -142,12 +142,11 @@ async function crearArea(req, res) {
   }
 
   const body = req.body || {};
-  const codigo = typeof body.codigo === 'string' ? body.codigo.trim().toUpperCase() : '';
   const nombre = typeof body.nombre === 'string' ? body.nombre.trim() : '';
   const descripcion = typeof body.descripcion === 'string' ? body.descripcion.trim() : null;
   const ubicacion = typeof body.ubicacion === 'string' ? body.ubicacion.trim() : null;
 
-  if (!codigo || !nombre) {
+  if (!nombre) {
     return res.status(400).json({
       ok: false,
       mensaje: 'Los datos requeridos son inválidos'
@@ -159,22 +158,6 @@ async function crearArea(req, res) {
   try {
     await connection.beginTransaction();
 
-    const [duplicates] = await connection.execute(
-      `SELECT are_id
-       FROM are_areas_vivero
-       WHERE are_codigo = ?
-       LIMIT 1`,
-      [codigo]
-    );
-
-    if (duplicates.length > 0) {
-      await connection.rollback();
-      return res.status(409).json({
-        ok: false,
-        mensaje: 'El código de área ya se encuentra registrado'
-      });
-    }
-
     const [result] = await connection.execute(
       `INSERT INTO are_areas_vivero (
         are_codigo,
@@ -183,8 +166,17 @@ async function crearArea(req, res) {
         are_ubicacion,
         are_estado,
         are_id_usuario_creacion
-      ) VALUES (?, ?, ?, ?, 1, ?)`,
-      [codigo, nombre, descripcion || null, ubicacion || null, req.usuario.usu_id]
+      ) VALUES (UUID(), ?, ?, ?, 1, ?)`,
+      [nombre, descripcion || null, ubicacion || null, req.usuario.usu_id]
+    );
+
+    const codigo = `ARE-${String(result.insertId).padStart(6, '0')}`;
+
+    await connection.execute(
+      `UPDATE are_areas_vivero
+       SET are_codigo = ?
+       WHERE are_id = ?`,
+      [codigo, result.insertId]
     );
 
     await registrarAuditoria({
@@ -254,6 +246,13 @@ async function actualizarArea(req, res) {
 
   const body = req.body || {};
 
+  if (Object.prototype.hasOwnProperty.call(body, 'codigo')) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: 'El código no puede modificarse desde este endpoint'
+    });
+  }
+
   if (Object.prototype.hasOwnProperty.call(body, 'estado')) {
     return res.status(400).json({
       ok: false,
@@ -261,12 +260,11 @@ async function actualizarArea(req, res) {
     });
   }
 
-  const codigo = typeof body.codigo === 'string' ? body.codigo.trim().toUpperCase() : '';
   const nombre = typeof body.nombre === 'string' ? body.nombre.trim() : '';
   const descripcion = typeof body.descripcion === 'string' ? body.descripcion.trim() : null;
   const ubicacion = typeof body.ubicacion === 'string' ? body.ubicacion.trim() : null;
 
-  if (!codigo || !nombre) {
+  if (!nombre) {
     return res.status(400).json({
       ok: false,
       mensaje: 'Los datos requeridos son inválidos'
@@ -303,34 +301,16 @@ async function actualizarArea(req, res) {
 
     const current = rows[0];
 
-    const [duplicates] = await connection.execute(
-      `SELECT are_id
-       FROM are_areas_vivero
-       WHERE are_codigo = ?
-         AND are_id <> ?
-       LIMIT 1`,
-      [codigo, parsedId]
-    );
-
-    if (duplicates.length > 0) {
-      await connection.rollback();
-      return res.status(409).json({
-        ok: false,
-        mensaje: 'El código de área ya se encuentra registrado'
-      });
-    }
-
     await connection.execute(
       `UPDATE are_areas_vivero
        SET
-         are_codigo = ?,
          are_nombre = ?,
          are_descripcion = ?,
          are_ubicacion = ?,
          are_fecha_modificacion = CURRENT_TIMESTAMP,
          are_id_usuario_modificacion = ?
        WHERE are_id = ?`,
-      [codigo, nombre, descripcion || null, ubicacion || null, req.usuario.usu_id, parsedId]
+      [nombre, descripcion || null, ubicacion || null, req.usuario.usu_id, parsedId]
     );
 
     await registrarAuditoria({
@@ -346,7 +326,7 @@ async function actualizarArea(req, res) {
         are_estado: current.are_estado
       },
       newData: {
-        are_codigo: codigo,
+        are_codigo: current.are_codigo,
         are_nombre: nombre,
         are_descripcion: descripcion || null,
         are_ubicacion: ubicacion || null,
@@ -363,7 +343,7 @@ async function actualizarArea(req, res) {
       mensaje: 'Área actualizada correctamente',
       area: {
         id: parsedId,
-        codigo,
+        codigo: current.are_codigo,
         nombre,
         descripcion: descripcion || null,
         ubicacion: ubicacion || null,

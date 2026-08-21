@@ -142,12 +142,13 @@ async function crearEspecie(req, res) {
   }
 
   const body = req.body || {};
-  const codigo = typeof body.codigo === 'string' ? body.codigo.trim().toUpperCase() : '';
-  const nombreComun = typeof body.nombre_comun === 'string' ? body.nombre_comun.trim() : '';
+  const nombreComun = typeof body.nombre_comun === 'string'
+    ? body.nombre_comun.trim()
+    : (typeof body.nombreComun === 'string' ? body.nombreComun.trim() : '');
   const nombreCientifico = typeof body.nombre_cientifico === 'string' ? body.nombre_cientifico.trim() : null;
   const descripcion = typeof body.descripcion === 'string' ? body.descripcion.trim() : null;
 
-  if (!codigo || !nombreComun) {
+  if (!nombreComun) {
     return res.status(400).json({
       ok: false,
       mensaje: 'Los datos requeridos son inválidos'
@@ -159,22 +160,6 @@ async function crearEspecie(req, res) {
   try {
     await connection.beginTransaction();
 
-    const [duplicates] = await connection.execute(
-      `SELECT esp_id
-       FROM esp_especies
-       WHERE esp_codigo = ?
-       LIMIT 1`,
-      [codigo]
-    );
-
-    if (duplicates.length > 0) {
-      await connection.rollback();
-      return res.status(409).json({
-        ok: false,
-        mensaje: 'El código de especie ya se encuentra registrado'
-      });
-    }
-
     const [result] = await connection.execute(
       `INSERT INTO esp_especies (
         esp_codigo,
@@ -183,8 +168,17 @@ async function crearEspecie(req, res) {
         esp_descripcion,
         esp_estado,
         esp_id_usuario_creacion
-      ) VALUES (?, ?, ?, ?, 1, ?)`,
-      [codigo, nombreComun, nombreCientifico || null, descripcion || null, req.usuario.usu_id]
+      ) VALUES (UUID(), ?, ?, ?, 1, ?)`,
+      [nombreComun, nombreCientifico || null, descripcion || null, req.usuario.usu_id]
+    );
+
+    const codigo = `ESP-${String(result.insertId).padStart(6, '0')}`;
+
+    await connection.execute(
+      `UPDATE esp_especies
+       SET esp_codigo = ?
+       WHERE esp_id = ?`,
+      [codigo, result.insertId]
     );
 
     await registrarAuditoria({
@@ -254,6 +248,13 @@ async function actualizarEspecie(req, res) {
 
   const body = req.body || {};
 
+  if (Object.prototype.hasOwnProperty.call(body, 'codigo')) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: 'El código no puede modificarse desde este endpoint'
+    });
+  }
+
   if (Object.prototype.hasOwnProperty.call(body, 'estado')) {
     return res.status(400).json({
       ok: false,
@@ -261,12 +262,11 @@ async function actualizarEspecie(req, res) {
     });
   }
 
-  const codigo = typeof body.codigo === 'string' ? body.codigo.trim().toUpperCase() : '';
   const nombreComun = typeof body.nombre_comun === 'string' ? body.nombre_comun.trim() : '';
   const nombreCientifico = typeof body.nombre_cientifico === 'string' ? body.nombre_cientifico.trim() : null;
   const descripcion = typeof body.descripcion === 'string' ? body.descripcion.trim() : null;
 
-  if (!codigo || !nombreComun) {
+  if (!nombreComun) {
     return res.status(400).json({
       ok: false,
       mensaje: 'Los datos requeridos son inválidos'
@@ -303,27 +303,9 @@ async function actualizarEspecie(req, res) {
 
     const current = rows[0];
 
-    const [duplicates] = await connection.execute(
-      `SELECT esp_id
-       FROM esp_especies
-       WHERE esp_codigo = ?
-         AND esp_id <> ?
-       LIMIT 1`,
-      [codigo, parsedId]
-    );
-
-    if (duplicates.length > 0) {
-      await connection.rollback();
-      return res.status(409).json({
-        ok: false,
-        mensaje: 'El código de especie ya se encuentra registrado'
-      });
-    }
-
     await connection.execute(
       `UPDATE esp_especies
        SET
-         esp_codigo = ?,
          esp_nombre_comun = ?,
          esp_nombre_cientifico = ?,
          esp_descripcion = ?,
@@ -331,7 +313,6 @@ async function actualizarEspecie(req, res) {
          esp_id_usuario_modificacion = ?
        WHERE esp_id = ?`,
       [
-        codigo,
         nombreComun,
         nombreCientifico || null,
         descripcion || null,
@@ -353,7 +334,7 @@ async function actualizarEspecie(req, res) {
         esp_estado: current.esp_estado
       },
       newData: {
-        esp_codigo: codigo,
+        esp_codigo: current.esp_codigo,
         esp_nombre_comun: nombreComun,
         esp_nombre_cientifico: nombreCientifico || null,
         esp_descripcion: descripcion || null,
@@ -370,7 +351,7 @@ async function actualizarEspecie(req, res) {
       mensaje: 'Especie actualizada correctamente',
       especie: {
         id: parsedId,
-        codigo,
+        codigo: current.esp_codigo,
         nombre_comun: nombreComun,
         nombre_cientifico: nombreCientifico || null,
         descripcion: descripcion || null,

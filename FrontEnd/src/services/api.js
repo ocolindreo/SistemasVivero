@@ -80,3 +80,27 @@ export const editarUsuario = (id, datos) => request(`/api/usuarios/${id}`, { met
 export const inactivarUsuario = (id) => request(`/api/usuarios/${id}/inactivar`, { method: 'PATCH' })
 export const reactivarUsuario = (id) => request(`/api/usuarios/${id}/reactivar`, { method: 'PATCH' })
 export const cerrarSesion = () => request('/api/auth/logout', { method: 'POST' })
+
+export const obtenerEspecies = () => request('/api/especies')
+export const obtenerEspecie = (id) => request(`/api/especies/${id}`)
+export const crearEspecie = (datos) => request('/api/especies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const editarEspecie = (id, datos) => request(`/api/especies/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const inactivarEspecie = (id) => request(`/api/especies/${id}/inactivar`, { method: 'PATCH' })
+export const reactivarEspecie = (id) => request(`/api/especies/${id}/reactivar`, { method: 'PATCH' })
+
+export const obtenerAreas = () => request('/api/areas')
+export const obtenerArea = (id) => request(`/api/areas/${id}`)
+export const crearArea = (datos) => request('/api/areas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const editarArea = (id, datos) => request(`/api/areas/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const inactivarArea = (id) => request(`/api/areas/${id}/inactivar`, { method: 'PATCH' })
+export const reactivarArea = (id) => request(`/api/areas/${id}/reactivar`, { method: 'PATCH' })
+
+export const obtenerBeneficiarios = () => request('/api/beneficiarios')
+export const obtenerBeneficiario = (id) => request(`/api/beneficiarios/${id}`)
+export const crearBeneficiario = (datos) => request('/api/beneficiarios', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const editarBeneficiario = (id, datos) => request(`/api/beneficiarios/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const inactivarBeneficiario = (id) => request(`/api/beneficiarios/${id}/inactivar`, { method: 'PATCH' })
+export const reactivarBeneficiario = (id) => request(`/api/beneficiarios/${id}/reactivar`, { method: 'PATCH' })
+
+export const obtenerEstados = () => request('/api/estados')
+export const obtenerEstado = (id) => request(`/api/estados/${id}`)
