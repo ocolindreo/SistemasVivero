@@ -1,4 +1,27 @@
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '')
+
+async function parseResponseBody(response) {
+  if (response.status === 204) {
+    return null
+  }
+
+  const contentType = response.headers.get('content-type') || ''
+  const text = await response.text()
+
+  if (!text) {
+    return null
+  }
+
+  if (!contentType.includes('application/json')) {
+    return { mensaje: text }
+  }
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}
 
 export async function login(usuario, password) {
   const response = await fetch(`${API_URL}/api/auth/login`, {
@@ -10,10 +33,10 @@ export async function login(usuario, password) {
     body: JSON.stringify({ usuario, password }),
   })
 
-  const data = await response.json()
+  const data = await parseResponseBody(response)
 
   if (!response.ok) {
-    const error = new Error(data.mensaje || 'No fue posible iniciar sesión')
+    const error = new Error(data?.mensaje || 'No fue posible iniciar sesión')
     error.status = response.status
     throw error
   }
@@ -27,10 +50,10 @@ export async function obtenerSesion() {
     credentials: 'include',
   })
 
-  const data = await response.json()
+  const data = await parseResponseBody(response)
 
   if (!response.ok) {
-    const error = new Error(data.mensaje || 'No fue posible verificar la sesión')
+    const error = new Error(data?.mensaje || 'No fue posible verificar la sesión')
     error.status = response.status
     throw error
   }
@@ -40,9 +63,9 @@ export async function obtenerSesion() {
 
 async function request(url, options = {}) {
   const response = await fetch(`${API_URL}${url}`, { ...options, credentials: 'include' })
-  const data = await response.json()
+  const data = await parseResponseBody(response)
   if (!response.ok) {
-    const error = new Error(data.mensaje || 'No fue posible completar la operación')
+    const error = new Error(data?.mensaje || 'No fue posible completar la operación')
     error.status = response.status
     throw error
   }
