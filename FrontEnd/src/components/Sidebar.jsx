@@ -2,7 +2,7 @@ const navigationItems = [
   { label: 'Inicio', view: 'inicio', available: true },
   { label: 'Seguridad y Usuarios', view: 'usuarios', available: true },
   { label: 'Catálogos', view: 'catalogos', available: true },
-  { label: 'Producción', available: false },
+  { label: 'Producción', view: 'produccion', available: true },
   { label: 'Inventario', available: false },
   { label: 'Solicitudes', available: false },
   { label: 'Reservas', available: false },

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Modal from '../../components/Modal'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import StatusBadge from '../../components/StatusBadge'
+import DataTable from '../../components/DataTable'
 import { DEPARTAMENTOS_GUATEMALA, UBICACIONES_GUATEMALA } from '../../data/ubicacionesGuatemala'
 import {
   obtenerEspecies,
@@ -234,6 +235,61 @@ function CatalogosView({ currentUser, onToast, onSessionInvalid }) {
     }
   }
 
+  function renderCatalogActions(resource, item, emptyForm, canEdit, inactivateAction, reactivateAction) {
+    if (!canEdit) return <span className="action-note">Solo lectura</span>
+
+    return (
+      <>
+        <button className="text-button" type="button" onClick={() => setModal({ kind: resource.slice(0, -1), record: item, form: { ...emptyForm, ...item } })}>Editar</button>
+        <button
+          className="text-button"
+          type="button"
+          onClick={() => requestStatusChange({
+            resource,
+            item,
+            inactivate: item.estado === 1,
+            execute: () => (item.estado === 1 ? inactivateAction(item.id) : reactivateAction(item.id)),
+          })}
+        >
+          {item.estado === 1 ? 'Inactivar' : 'Reactivar'}
+        </button>
+      </>
+    )
+  }
+
+  const especiesColumns = [
+    { key: 'codigo', label: 'Codigo', sortable: true },
+    { key: 'nombre_comun', label: 'Nombre comun', sortable: true },
+    { key: 'nombre_cientifico', label: 'Nombre cientifico', sortable: true, render: (item) => item.nombre_cientifico || '-' },
+    { key: 'estado', label: 'Estado', sortable: true, render: (item) => <StatusBadge active={item.estado === 1} /> },
+    { key: 'acciones', label: 'Acciones', sortable: false, className: 'row-actions', render: (item) => renderCatalogActions('especies', item, EMPTY_ESPECIE, canWrite.especies, inactivarEspecie, reactivarEspecie) },
+  ]
+
+  const areasColumns = [
+    { key: 'codigo', label: 'Codigo', sortable: true },
+    { key: 'nombre', label: 'Nombre', sortable: true },
+    { key: 'ubicacion', label: 'Ubicacion', sortable: true, render: (item) => item.ubicacion || '-' },
+    { key: 'estado', label: 'Estado', sortable: true, render: (item) => <StatusBadge active={item.estado === 1} /> },
+    { key: 'acciones', label: 'Acciones', sortable: false, className: 'row-actions', render: (item) => renderCatalogActions('areas', item, EMPTY_AREA, canWrite.areas, inactivarArea, reactivarArea) },
+  ]
+
+  const beneficiariosColumns = [
+    { key: 'codigo', label: 'Codigo', sortable: true },
+    { key: 'nombre', label: 'Nombre', sortable: true },
+    { key: 'tipo', label: 'Tipo', sortable: true, render: (item) => BENEFICIARIO_TIPOS.find((tipo) => tipo.value === item.tipo)?.label || item.tipo },
+    { key: 'municipio', label: 'Municipio', sortable: true, render: (item) => item.municipio || '-' },
+    { key: 'telefono', label: 'Telefono', sortable: true, render: (item) => item.telefono || '-' },
+    { key: 'estado', label: 'Estado', sortable: true, render: (item) => <StatusBadge active={item.estado === 1} /> },
+    { key: 'acciones', label: 'Acciones', sortable: false, className: 'row-actions', render: (item) => renderCatalogActions('beneficiarios', item, EMPTY_BENEFICIARIO, canWrite.beneficiarios, inactivarBeneficiario, reactivarBeneficiario) },
+  ]
+
+  const estadosColumns = [
+    { key: 'codigo', label: 'Codigo', sortable: true },
+    { key: 'descripcion', label: 'Descripcion', sortable: true },
+    { key: 'modulo', label: 'Modulo', sortable: true },
+    { key: 'orden', label: 'Orden', sortable: true },
+  ]
+
   async function saveModalForm(event) {
     event.preventDefault()
     if (!modal) return
@@ -400,55 +456,7 @@ function CatalogosView({ currentUser, onToast, onSessionInvalid }) {
           <>
             {error.especies ? <p className="users-alert">{error.especies}</p> : null}
             {loading.especies ? <div className="empty-state">Cargando especies...</div> : null}
-            {!loading.especies && filteredEspecies.length === 0 ? (
-              <div className="empty-state">{data.especies.length ? 'No hay resultados para la busqueda.' : 'No hay especies registradas.'}</div>
-            ) : null}
-            {!loading.especies && filteredEspecies.length > 0 ? (
-              <div className="table-wrap catalog-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Codigo</th>
-                      <th>Nombre comun</th>
-                      <th>Nombre cientifico</th>
-                      <th>Estado</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredEspecies.map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.codigo}</td>
-                        <td>{item.nombre_comun}</td>
-                        <td>{item.nombre_cientifico || '-'}</td>
-                        <td><StatusBadge active={item.estado === 1} /></td>
-                        <td className="row-actions">
-                          {canWrite.especies ? (
-                            <>
-                              <button className="text-button" type="button" onClick={() => setModal({ kind: 'especie', record: item, form: { ...EMPTY_ESPECIE, ...item } })}>Editar</button>
-                              <button
-                                className="text-button"
-                                type="button"
-                                onClick={() => requestStatusChange({
-                                  resource: 'especies',
-                                  item,
-                                  inactivate: item.estado === 1,
-                                  execute: () => (item.estado === 1 ? inactivarEspecie(item.id) : reactivarEspecie(item.id)),
-                                })}
-                              >
-                                {item.estado === 1 ? 'Inactivar' : 'Reactivar'}
-                              </button>
-                            </>
-                          ) : (
-                            <span className="action-note">Solo lectura</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
+            {!loading.especies ? <DataTable columns={especiesColumns} data={filteredEspecies} getRowKey={(item) => item.id} emptyMessage={data.especies.length ? 'No hay resultados para la busqueda.' : 'No hay especies registradas.'} /> : null}
           </>
         )}
 
@@ -456,55 +464,7 @@ function CatalogosView({ currentUser, onToast, onSessionInvalid }) {
           <>
             {error.areas ? <p className="users-alert">{error.areas}</p> : null}
             {loading.areas ? <div className="empty-state">Cargando areas...</div> : null}
-            {!loading.areas && filteredAreas.length === 0 ? (
-              <div className="empty-state">{data.areas.length ? 'No hay resultados para la busqueda.' : 'No hay areas registradas.'}</div>
-            ) : null}
-            {!loading.areas && filteredAreas.length > 0 ? (
-              <div className="table-wrap catalog-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Codigo</th>
-                      <th>Nombre</th>
-                      <th>Ubicacion</th>
-                      <th>Estado</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAreas.map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.codigo}</td>
-                        <td>{item.nombre}</td>
-                        <td>{item.ubicacion || '-'}</td>
-                        <td><StatusBadge active={item.estado === 1} /></td>
-                        <td className="row-actions">
-                          {canWrite.areas ? (
-                            <>
-                              <button className="text-button" type="button" onClick={() => setModal({ kind: 'area', record: item, form: { ...EMPTY_AREA, ...item } })}>Editar</button>
-                              <button
-                                className="text-button"
-                                type="button"
-                                onClick={() => requestStatusChange({
-                                  resource: 'areas',
-                                  item,
-                                  inactivate: item.estado === 1,
-                                  execute: () => (item.estado === 1 ? inactivarArea(item.id) : reactivarArea(item.id)),
-                                })}
-                              >
-                                {item.estado === 1 ? 'Inactivar' : 'Reactivar'}
-                              </button>
-                            </>
-                          ) : (
-                            <span className="action-note">Solo lectura</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
+            {!loading.areas ? <DataTable columns={areasColumns} data={filteredAreas} getRowKey={(item) => item.id} emptyMessage={data.areas.length ? 'No hay resultados para la busqueda.' : 'No hay areas registradas.'} /> : null}
           </>
         )}
 
@@ -512,59 +472,7 @@ function CatalogosView({ currentUser, onToast, onSessionInvalid }) {
           <>
             {error.beneficiarios ? <p className="users-alert">{error.beneficiarios}</p> : null}
             {loading.beneficiarios ? <div className="empty-state">Cargando beneficiarios...</div> : null}
-            {!loading.beneficiarios && filteredBeneficiarios.length === 0 ? (
-              <div className="empty-state">{data.beneficiarios.length ? 'No hay resultados para la busqueda.' : 'No hay beneficiarios registrados.'}</div>
-            ) : null}
-            {!loading.beneficiarios && filteredBeneficiarios.length > 0 ? (
-              <div className="table-wrap catalog-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Codigo</th>
-                      <th>Nombre</th>
-                      <th>Tipo</th>
-                      <th>Municipio</th>
-                      <th>Telefono</th>
-                      <th>Estado</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredBeneficiarios.map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.codigo}</td>
-                        <td>{item.nombre}</td>
-                        <td>{BENEFICIARIO_TIPOS.find((tipo) => tipo.value === item.tipo)?.label || item.tipo}</td>
-                        <td>{item.municipio || '-'}</td>
-                        <td>{item.telefono || '-'}</td>
-                        <td><StatusBadge active={item.estado === 1} /></td>
-                        <td className="row-actions">
-                          {canWrite.beneficiarios ? (
-                            <>
-                              <button className="text-button" type="button" onClick={() => setModal({ kind: 'beneficiario', record: item, form: { ...EMPTY_BENEFICIARIO, ...item } })}>Editar</button>
-                              <button
-                                className="text-button"
-                                type="button"
-                                onClick={() => requestStatusChange({
-                                  resource: 'beneficiarios',
-                                  item,
-                                  inactivate: item.estado === 1,
-                                  execute: () => (item.estado === 1 ? inactivarBeneficiario(item.id) : reactivarBeneficiario(item.id)),
-                                })}
-                              >
-                                {item.estado === 1 ? 'Inactivar' : 'Reactivar'}
-                              </button>
-                            </>
-                          ) : (
-                            <span className="action-note">Solo lectura</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
+            {!loading.beneficiarios ? <DataTable columns={beneficiariosColumns} data={filteredBeneficiarios} getRowKey={(item) => item.id} emptyMessage={data.beneficiarios.length ? 'No hay resultados para la busqueda.' : 'No hay beneficiarios registrados.'} /> : null}
           </>
         )}
 
@@ -572,33 +480,7 @@ function CatalogosView({ currentUser, onToast, onSessionInvalid }) {
           <>
             {error.estados ? <p className="users-alert">{error.estados}</p> : null}
             {loading.estados ? <div className="empty-state">Cargando estados...</div> : null}
-            {!loading.estados && filteredEstados.length === 0 ? (
-              <div className="empty-state">{data.estados.length ? 'No hay resultados para la busqueda.' : 'No hay estados registrados.'}</div>
-            ) : null}
-            {!loading.estados && filteredEstados.length > 0 ? (
-              <div className="table-wrap catalog-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Codigo</th>
-                      <th>Descripcion</th>
-                      <th>Modulo</th>
-                      <th>Orden</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredEstados.map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.codigo}</td>
-                        <td>{item.descripcion}</td>
-                        <td>{item.modulo}</td>
-                        <td>{item.orden}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
+            {!loading.estados ? <DataTable columns={estadosColumns} data={filteredEstados} getRowKey={(item) => item.id} emptyMessage={data.estados.length ? 'No hay resultados para la busqueda.' : 'No hay estados registrados.'} /> : null}
           </>
         )}
       </div>

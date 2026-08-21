@@ -104,3 +104,13 @@ export const reactivarBeneficiario = (id) => request(`/api/beneficiarios/${id}/r
 
 export const obtenerEstados = () => request('/api/estados')
 export const obtenerEstado = (id) => request(`/api/estados/${id}`)
+
+export const obtenerLotes = () => request('/api/produccion/lotes')
+export const obtenerLote = (id) => request(`/api/produccion/lotes/${id}`)
+export const obtenerEtapasLote = (id) => request(`/api/produccion/lotes/${id}/etapas`)
+export const obtenerResponsablesProduccion = () => request('/api/produccion/responsables')
+export const crearLote = (datos) => request('/api/produccion/lotes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const editarObservacionesLote = (id, datos) => request(`/api/produccion/lotes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const avanzarEtapaLote = (id, datos) => request(`/api/produccion/lotes/${id}/avanzar-etapa`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const cancelarLote = (id, datos) => request(`/api/produccion/lotes/${id}/cancelar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+
