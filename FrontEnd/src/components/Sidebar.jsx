@@ -3,7 +3,7 @@ const navigationItems = [
   { label: 'Seguridad y Usuarios', view: 'usuarios', available: true },
   { label: 'Catálogos', view: 'catalogos', available: true },
   { label: 'Producción', view: 'produccion', available: true },
-  { label: 'Inventario', available: false },
+  { label: 'Inventario', view: 'inventario', available: true },
   { label: 'Solicitudes', available: false },
   { label: 'Reservas', available: false },
   { label: 'Entregas', available: false },

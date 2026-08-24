@@ -114,3 +114,10 @@ export const editarObservacionesLote = (id, datos) => request(`/api/produccion/l
 export const avanzarEtapaLote = (id, datos) => request(`/api/produccion/lotes/${id}/avanzar-etapa`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
 export const cancelarLote = (id, datos) => request(`/api/produccion/lotes/${id}/cancelar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
 
+export const obtenerInventario = () => request('/api/inventario')
+export const obtenerInventarioDetalle = (id) => request(`/api/inventario/${id}`)
+export const obtenerMovimientosInventario = (id) => request(`/api/inventario/${id}/movimientos`)
+export const registrarPerdidaInventario = (id, datos) => request(`/api/inventario/${id}/perdida`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const registrarAjustePositivoInventario = (id, datos) => request(`/api/inventario/${id}/ajuste-positivo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const registrarAjusteNegativoInventario = (id, datos) => request(`/api/inventario/${id}/ajuste-negativo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+

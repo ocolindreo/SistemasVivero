@@ -89,6 +89,33 @@ async function registrarAuditoria({ connection, userId, action, recordId, previo
   );
 }
 
+async function registrarAuditoriaInventario({ connection, userId, action, recordId, previousData, newData, request, observation }) {
+  await connection.execute(
+    `INSERT INTO aud_auditorias (
+      aud_id_usuario,
+      aud_accion,
+      aud_tabla,
+      aud_id_registro,
+      aud_datos_anteriores,
+      aud_datos_nuevos,
+      aud_ip,
+      aud_navegador,
+      aud_observacion
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      userId,
+      action,
+      'inv_inventario',
+      recordId,
+      previousData ? JSON.stringify(previousData) : null,
+      newData ? JSON.stringify(newData) : null,
+      request.ip || null,
+      request.get('user-agent') || null,
+      observation || null
+    ]
+  );
+}
+
 async function obtenerEstadoProduccionActivo(connection, codigo) {
   const [rows] = await connection.execute(
     `SELECT est_id, est_codigo, est_descripcion
@@ -1007,6 +1034,77 @@ async function avanzarEtapaLote(req, res) {
     );
 
     const merma = lote.lot_cantidad_actual - nuevaCantidad;
+    let inventarioCreado = null;
+
+    if (lote.estado_codigo === 'ENDURECIMIENTO' && estadoSiguiente.est_codigo === 'DISPONIBLE') {
+      const [inventariosExistentes] = await connection.execute(
+        `SELECT inv_id
+         FROM inv_inventario
+         WHERE inv_id_lote = ?
+         LIMIT 1
+         FOR UPDATE`,
+        [Number(id)]
+      );
+
+      if (inventariosExistentes.length > 0) {
+        await connection.rollback();
+        return res.status(409).json({ ok: false, mensaje: 'El lote ya tiene inventario asociado' });
+      }
+
+      const [inventarioResult] = await connection.execute(
+        `INSERT INTO inv_inventario (
+           inv_id_lote,
+           inv_id_area,
+           inv_cantidad_total,
+           inv_cantidad_reservada,
+           inv_fecha_disponibilidad,
+           inv_estado,
+           inv_id_usuario_creacion
+         ) VALUES (?, ?, ?, 0, ?, 1, ?)`,
+        [Number(id), areaId, nuevaCantidad, fechaInicioNueva, req.usuario.usu_id]
+      );
+
+      await connection.execute(
+        `INSERT INTO mov_movimientos_inventario (
+           mov_id_inventario,
+           mov_tipo,
+           mov_cantidad,
+           mov_motivo,
+           mov_id_usuario,
+           mov_referencia,
+           mov_id_referencia,
+           mov_observaciones,
+           mov_estado
+         ) VALUES (?, 'INGRESO', ?, 'Ingreso automático desde Producción', ?, 'LOTE', ?, ?, 1)`,
+        [
+          inventarioResult.insertId,
+          nuevaCantidad,
+          req.usuario.usu_id,
+          Number(id),
+          `Ingreso automático por avance del lote ${lote.lot_codigo} a DISPONIBLE`
+        ]
+      );
+
+      inventarioCreado = {
+        inv_id: inventarioResult.insertId,
+        inv_id_lote: Number(id),
+        inv_id_area: areaId,
+        inv_cantidad_total: nuevaCantidad,
+        inv_cantidad_reservada: 0,
+        inv_fecha_disponibilidad: fechaInicioNueva,
+      };
+
+      await registrarAuditoriaInventario({
+        connection,
+        userId: req.usuario.usu_id,
+        action: 'CREATE',
+        recordId: inventarioResult.insertId,
+        previousData: null,
+        newData: inventarioCreado,
+        request: req,
+        observation: 'Inventario creado automáticamente desde Producción'
+      });
+    }
 
     await registrarAuditoria({
       connection,
@@ -1025,6 +1123,7 @@ async function avanzarEtapaLote(req, res) {
         area_id: areaId,
         responsable_id: responsableId,
         merma,
+        inventario_creado: inventarioCreado,
       },
       request: req,
       observation: `Cambio de etapa ${lote.estado_codigo} a ${estadoSiguiente.est_codigo}`

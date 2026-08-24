@@ -5,6 +5,7 @@ import Topbar from './components/Topbar'
 import UsuariosView from './features/usuarios/UsuariosView'
 import CatalogosView from './features/catalogos/CatalogosView'
 import ProduccionView from './features/produccion/ProduccionView'
+import InventarioView from './features/inventario/InventarioView'
 import Toast from './components/Toast'
 import ConfirmDialog from './components/ConfirmDialog'
 import './App.css'
@@ -142,8 +143,8 @@ function App() {
       <div className="authenticated-shell">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} activeView={vistaActual} onNavigate={setVistaActual} onLogout={requestLogout} />
         <div className="authenticated-main">
-          <Topbar usuario={authenticatedUser} onMenuToggle={() => setSidebarOpen(true)} context={vistaActual === 'usuarios' ? 'Seguridad y Usuarios' : vistaActual === 'catalogos' ? 'Catálogos' : vistaActual === 'produccion' ? 'Producción' : 'Inicio'} />
-          {vistaActual === 'usuarios' ? <UsuariosView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'catalogos' ? <CatalogosView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'produccion' ? <ProduccionView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : <main className="workspace" aria-labelledby="workspace-title">
+          <Topbar usuario={authenticatedUser} onMenuToggle={() => setSidebarOpen(true)} context={vistaActual === 'usuarios' ? 'Seguridad y Usuarios' : vistaActual === 'catalogos' ? 'Catálogos' : vistaActual === 'produccion' ? 'Producción' : vistaActual === 'inventario' ? 'Inventario' : 'Inicio'} />
+          {vistaActual === 'usuarios' ? <UsuariosView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'catalogos' ? <CatalogosView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'produccion' ? <ProduccionView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'inventario' ? <InventarioView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : <main className="workspace" aria-labelledby="workspace-title">
             <div className="page-heading">
               <span className="page-kicker">Inicio</span>
               <h1 id="workspace-title">Bienvenido, {authenticatedUser.nombres}</h1>

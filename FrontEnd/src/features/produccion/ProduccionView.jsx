@@ -390,7 +390,7 @@ function ProduccionView({ currentUser, onToast, onSessionInvalid }) {
   const mermaAcumulada = detalleLote ? detalleLote.cantidad_inicial - detalleLote.cantidad_actual : 0
 
   return (
-    <section className="produccion-view" aria-labelledby="produccion-title">
+    <section className={`produccion-view ${!detalleLote ? 'produccion-view-listado' : ''}`} aria-labelledby="produccion-title">
       {!detalleLote ? (
         // LISTADO PRINCIPAL
         <>
@@ -422,7 +422,7 @@ function ProduccionView({ currentUser, onToast, onSessionInvalid }) {
             )}
           </header>
 
-          <div className="data-card" role="region" aria-live="polite">
+          <div className="data-card produccion-table-card" role="region" aria-live="polite">
             <div className="produccion-toolbar">
               <input
                 className="user-search"
