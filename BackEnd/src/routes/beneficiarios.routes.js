@@ -26,7 +26,7 @@ function autorizarRoles(rolesPermitidos) {
 
 router.get('/', autenticarJWT, autorizarRoles(['ADMIN', 'VIVERO', 'GESTION', 'CONSULTA']), listarBeneficiarios);
 router.get('/:id', autenticarJWT, autorizarRoles(['ADMIN', 'VIVERO', 'GESTION', 'CONSULTA']), obtenerBeneficiarioPorId);
-router.post('/', autenticarJWT, autorizarRoles(['ADMIN', 'GESTION']), crearBeneficiario);
+router.post('/', autenticarJWT, autorizarRoles(['ADMIN', 'VIVERO', 'GESTION']), crearBeneficiario);
 router.put('/:id', autenticarJWT, autorizarRoles(['ADMIN', 'GESTION']), actualizarBeneficiario);
 router.patch('/:id/inactivar', autenticarJWT, autorizarRoles(['ADMIN', 'GESTION']), inactivarBeneficiario);
 router.patch('/:id/reactivar', autenticarJWT, autorizarRoles(['ADMIN', 'GESTION']), reactivarBeneficiario);

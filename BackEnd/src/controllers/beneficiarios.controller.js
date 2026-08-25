@@ -8,7 +8,7 @@ function esIdValido(value) {
 }
 
 function requiereRolEscritura(req, res) {
-  if (!['ADMIN', 'GESTION'].includes(req.usuario.rol_codigo)) {
+  if (!['ADMIN', 'VIVERO', 'GESTION'].includes(req.usuario.rol_codigo)) {
     res.status(403).json({
       ok: false,
       mensaje: 'No tiene permisos para realizar esta operación'

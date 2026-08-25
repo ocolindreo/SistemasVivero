@@ -58,7 +58,7 @@ const EMPTY_BENEFICIARIO = {
 const WRITE_PERMISSIONS = {
   especies: ['ADMIN', 'VIVERO'],
   areas: ['ADMIN', 'VIVERO'],
-  beneficiarios: ['ADMIN', 'GESTION'],
+  beneficiarios: ['ADMIN', 'VIVERO', 'GESTION'],
 }
 
 function mapError(error, fallbackMessage) {

@@ -110,6 +110,34 @@
 .produccion-view-listado { box-sizing: border-box; width: 100%; max-width: min(1600px, 100%); }
 .inventario-view { max-width: 1280px; margin: 0 auto; padding: 40px; }
 .inventario-view-listado { box-sizing: border-box; width: 100%; max-width: min(1600px, 100%); }
+.solicitudes-view { max-width: 1280px; margin: 0 auto; padding: 40px; }
+.solicitudes-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+.solicitudes-header h1 { margin: 8px 0; font-size: 36px; }
+.solicitudes-header p { margin: 0; color: var(--color-text-secondary); }
+.solicitudes-view-listado,
+.solicitudes-table-card { width: 100%; box-sizing: border-box; }
+.solicitudes-toolbar { display: flex; gap: 10px; margin-bottom: 20px; }
+.solicitudes-toolbar .user-search { margin: 0; }
+.solicitudes-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.solicitudes-details-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-border); }
+.solicitudes-section-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.solicitudes-section-header h3 { margin: 0; font-size: 16px; }
+.solicitudes-detail-list { display: grid; gap: 16px; }
+.solicitud-detail-row { display: grid; grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr) minmax(150px, .8fr) auto; align-items: end; gap: 14px; padding: 16px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface-soft); }
+.solicitud-detail-row > div { min-width: 0; }
+.solicitud-detail-row label { display: grid; gap: 7px; margin: 0; color: var(--color-text); font-size: 13px; font-weight: 600; }
+.solicitud-detail-row select,
+.solicitud-detail-row input,
+.solicitud-beneficiario-control select { width: 100%; min-width: 0; box-sizing: border-box; }
+.solicitud-detail-summary { color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; }
+.solicitud-remove-button { margin-bottom: 10px; white-space: nowrap; }
+.solicitudes-total { margin-top: 16px; color: var(--color-primary-dark); font-size: 15px; }
+.solicitud-beneficiario-control { display: flex; align-items: stretch; gap: 8px; }
+.solicitud-beneficiario-control button { white-space: nowrap; }
+.field-error { display: block; margin-top: 6px; color: var(--color-danger); font-size: 11px; line-height: 1.3; }
+.solicitud-reserved-note { margin-top: 20px; padding: 14px 16px; border: 1px solid var(--color-primary-light); border-radius: 6px; color: var(--color-primary-dark); background: #f0f9f2; font-size: 13px; }
+.status-rejected { color: var(--color-danger); background: #fff5f5; }
+.inventario-actions { flex-wrap: wrap; }
 .produccion-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
 .inventario-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
 .produccion-header h1 { margin: 8px 0; font-size: 36px; }
@@ -1208,6 +1236,15 @@ button:disabled {
   .users-view { padding: 28px 20px; }
   .users-header { align-items: flex-start; flex-direction: column; }
   .users-header button { margin-top: 0; }
+  .solicitudes-view { padding: 28px 20px; }
+  .solicitudes-header { align-items: flex-start; flex-direction: column; }
+  .solicitudes-tabs { grid-template-columns: 1fr; }
+  .solicitudes-toolbar { flex-direction: column; }
+  .solicitudes-toolbar .user-search { width: 100%; max-width: none; }
+  .solicitud-detail-row { grid-template-columns: 1fr; align-items: stretch; }
+  .solicitud-remove-button { margin-bottom: 0; justify-self: start; }
+  .solicitud-beneficiario-control { align-items: stretch; flex-direction: column; }
+  .solicitud-beneficiario-control button { width: 100%; }
   .data-card { padding: 16px; }
   .data-table-footer { align-items: stretch; flex-direction: column; }
   .data-table-pagination { justify-content: flex-start; }

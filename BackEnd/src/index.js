@@ -14,6 +14,7 @@ const beneficiariosRoutes = require('./routes/beneficiarios.routes');
 const areasRoutes = require('./routes/areas.routes');
 const produccionRoutes = require('./routes/produccion.routes');
 const inventarioRoutes = require('./routes/inventario.routes');
+const solicitudesRoutes = require('./routes/solicitudes.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,6 +35,7 @@ app.use('/api/beneficiarios', beneficiariosRoutes);
 app.use('/api/areas', areasRoutes);
 app.use('/api/produccion', produccionRoutes);
 app.use('/api/inventario', inventarioRoutes);
+app.use('/api/solicitudes', solicitudesRoutes);
 
 // Rutas de prueba
 app.get('/', (req, res) => {

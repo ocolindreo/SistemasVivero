@@ -121,3 +121,9 @@ export const registrarPerdidaInventario = (id, datos) => request(`/api/inventari
 export const registrarAjustePositivoInventario = (id, datos) => request(`/api/inventario/${id}/ajuste-positivo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
 export const registrarAjusteNegativoInventario = (id, datos) => request(`/api/inventario/${id}/ajuste-negativo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
 
+export const obtenerSolicitudes = () => request('/api/solicitudes')
+export const obtenerSolicitud = (id) => request(`/api/solicitudes/${id}`)
+export const crearSolicitud = (datos) => request('/api/solicitudes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const aprobarSolicitud = (id) => request(`/api/solicitudes/${id}/aprobar`, { method: 'POST' })
+export const rechazarSolicitud = (id, datos) => request(`/api/solicitudes/${id}/rechazar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+
