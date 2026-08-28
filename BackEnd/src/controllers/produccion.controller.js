@@ -1205,6 +1205,11 @@ async function cancelarLote(req, res) {
       return res.status(409).json({ ok: false, mensaje: 'No se puede cancelar un lote finalizado' });
     }
 
+    if (lote.estado_codigo === 'DISPONIBLE') {
+      await connection.rollback();
+      return res.status(409).json({ ok: false, mensaje: 'El lote ya fue transferido a Inventario y no puede cancelarse' });
+    }
+
     const estadoCancelado = await obtenerEstadoProduccionActivo(connection, 'CANCELADO');
     if (!estadoCancelado) {
       await connection.rollback();

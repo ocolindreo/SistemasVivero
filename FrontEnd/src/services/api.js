@@ -127,3 +127,10 @@ export const crearSolicitud = (datos) => request('/api/solicitudes', { method: '
 export const aprobarSolicitud = (id) => request(`/api/solicitudes/${id}/aprobar`, { method: 'POST' })
 export const rechazarSolicitud = (id, datos) => request(`/api/solicitudes/${id}/rechazar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
 
+export const obtenerEntregas = () => request('/api/entregas')
+export const obtenerEntrega = (id) => request(`/api/entregas/${id}`)
+export const crearEntrega = (datos) => request('/api/entregas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+export const prepararEntrega = (id) => request(`/api/entregas/${id}/preparar`, { method: 'POST' })
+export const marcarEntregaLista = (id) => request(`/api/entregas/${id}/lista`, { method: 'POST' })
+export const confirmarEntrega = (id, datos) => request(`/api/entregas/${id}/confirmar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+

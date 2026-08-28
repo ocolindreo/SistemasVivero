@@ -96,6 +96,20 @@ async function obtenerEstadoSolicitud(connection, codigo) {
   return rows[0] || null;
 }
 
+async function obtenerEstadoReserva(connection, codigo) {
+  const [rows] = await connection.execute(
+    `SELECT est_id, est_codigo, est_descripcion
+     FROM est_estados
+     WHERE est_modulo = 'RESERVA'
+       AND est_codigo = ?
+       AND est_estado = 1
+     LIMIT 1`,
+    [codigo]
+  );
+
+  return rows[0] || null;
+}
+
 async function obtenerSolicitudBase(connection, solicitudId, lock = false) {
   const [rows] = await connection.execute(
     `SELECT
@@ -563,7 +577,28 @@ async function aprobarSolicitud(req, res) {
       return res.status(409).json({ ok: false, mensaje: 'No existe el estado APROBADA activo para SOLICITUD' });
     }
 
+    const estadoReserva = await obtenerEstadoReserva(connection, 'RESERVADA');
+    if (!estadoReserva) {
+      await connection.rollback();
+      return res.status(409).json({ ok: false, mensaje: 'No existe el estado RESERVADA activo para RESERVA' });
+    }
+
     for (const detalle of detalles) {
+      const [reservasExistentes] = await connection.execute(
+        `SELECT res_id
+         FROM res_reservas
+         WHERE res_id_solicitud_detalle = ?
+           AND res_id_inventario = ?
+           AND res_estado = 1
+         LIMIT 1`,
+        [detalle.sod_id, detalle.inv_id]
+      );
+
+      if (reservasExistentes.length > 0) {
+        await connection.rollback();
+        return res.status(409).json({ ok: false, mensaje: `Ya existe una reserva persistente para el detalle ${detalle.sod_id} y el inventario ${detalle.inv_id}` });
+      }
+
       const nuevaReservada = Number(detalle.inv_cantidad_reservada) + Number(detalle.sod_cantidad_solicitada);
       await connection.execute(
         `UPDATE inv_inventario
@@ -572,6 +607,30 @@ async function aprobarSolicitud(req, res) {
              inv_id_usuario_modificacion = ?
          WHERE inv_id = ?`,
         [nuevaReservada, req.usuario.usu_id, detalle.inv_id]
+      );
+
+      await connection.execute(
+        `INSERT INTO res_reservas (
+           res_id_solicitud_detalle,
+           res_id_inventario,
+           res_cantidad,
+           res_fecha_reserva,
+           res_fecha_liberacion,
+           res_observaciones,
+           res_estado,
+           res_id_estado_proceso,
+           res_id_usuario_creacion,
+           res_fecha_creacion,
+           res_id_usuario_modificacion
+         ) VALUES (?, ?, ?, CURRENT_DATE, NULL, ?, 1, ?, ?, CURRENT_TIMESTAMP, NULL)`,
+        [
+          detalle.sod_id,
+          detalle.inv_id,
+          detalle.sod_cantidad_solicitada,
+          `Reserva generada por aprobación de solicitud ${solicitud.sol_codigo}`,
+          estadoReserva.est_id,
+          req.usuario.usu_id,
+        ]
       );
 
       await connection.execute(
@@ -619,6 +678,12 @@ async function aprobarSolicitud(req, res) {
           inv_cantidad_reservada: nuevaReservada,
           solicitud_id: Number(id),
           solicitud_codigo: solicitud.sol_codigo,
+          reserva: {
+            res_id_solicitud_detalle: detalle.sod_id,
+            res_id_inventario: detalle.inv_id,
+            res_cantidad: detalle.sod_cantidad_solicitada,
+            res_id_estado_proceso: estadoReserva.est_id,
+          },
         },
         request: req,
         observation: `Reserva por aprobación de ${solicitud.sol_codigo}`,

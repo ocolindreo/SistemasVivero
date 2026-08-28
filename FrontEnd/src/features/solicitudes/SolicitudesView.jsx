@@ -12,12 +12,15 @@ import {
   obtenerBeneficiarios,
   crearBeneficiario,
   obtenerInventario,
+  obtenerEntregas,
+  obtenerEntrega,
 } from '../../services/api'
 
 const SOLICITUD_TABS = [
   { id: 'REGISTRADA', label: 'Registradas', empty: 'No hay solicitudes registradas pendientes.' },
   { id: 'APROBADA', label: 'Aprobadas', empty: 'No hay solicitudes aprobadas.' },
   { id: 'RECHAZADA', label: 'Rechazadas', empty: 'No hay solicitudes rechazadas.' },
+  { id: 'HISTORICO', label: 'Histórico', empty: 'No hay solicitudes con entregas asociadas.' },
 ]
 const WRITE_ROLES = ['ADMIN', 'VIVERO', 'GESTION']
 const DECISION_ROLES = ['ADMIN', 'VIVERO']
@@ -41,9 +44,33 @@ function mapError(error, fallbackMessage) {
   return error?.message || fallbackMessage
 }
 
+function entregasDeSolicitud(entregas, solicitudId) {
+  return entregas.filter((entrega) => Number(entrega.solicitud?.id) === Number(solicitudId))
+}
+
+function totalEntregadoDeEntregas(entregas) {
+  return entregas.filter((entrega) => entrega.estado?.codigo !== 'CANCELADO').reduce((sum, entrega) => sum + Number(entrega.total_entregado || 0), 0)
+}
+
 function SolicitudStatusBadge({ estado }) {
-  const classes = { REGISTRADA: 'status-inactive', APROBADA: 'status-active', RECHAZADA: 'status-rejected' }
+  const classes = { REGISTRADA: 'status-inactive', APROBADA: 'status-active', RECHAZADA: 'status-rejected', ATENDIDA: 'status-active' }
   return <span className={`status-badge ${classes[estado] || 'status-inactive'}`}>{estado === 'REGISTRADA' ? 'Registrada' : estado === 'APROBADA' ? 'Aprobada' : estado === 'RECHAZADA' ? 'Rechazada' : estado}</span>
+}
+
+function DistribucionBadges({ entregas }) {
+  const estados = [...new Set((entregas || []).map((entrega) => entrega.estado?.codigo).filter(Boolean))]
+  return <div className="solicitudes-distribution-badges">{estados.length > 0 ? estados.map((estado) => <span className={`status-badge ${estado === 'ENTREGADA' ? 'status-active' : estado === 'CANCELADO' ? 'status-rejected' : 'status-inactive'}`} key={estado}>{estado}</span>) : '—'}</div>
+}
+
+function EntregaStatusBadge({ estado }) {
+  const codigo = estado?.codigo
+  const className = codigo === 'ENTREGADA' ? 'status-active' : codigo === 'CANCELADO' ? 'status-rejected' : 'status-inactive'
+  return <span className={`status-badge ${className}`}>{codigo || '—'}</span>
+}
+
+function EntregaHistorica({ entrega }) {
+  const total = (entrega.detalles || []).reduce((sum, detalle) => sum + Number(detalle.cantidad_entregada || 0), 0)
+  return <article className="historico-entrega"><div className="historico-entrega-header"><div><strong>{entrega.codigo}</strong><span>{formatearFecha(entrega.fecha_programada)}{entrega.fecha_entrega ? ` · Entregada ${formatearFecha(entrega.fecha_entrega)}` : ''}</span></div><div><EntregaStatusBadge estado={entrega.estado} /><span className="historico-entrega-total">{total} plantas</span></div></div><div className="historico-entrega-info"><span><strong>Responsable:</strong> {`${entrega.responsable?.nombres || ''} ${entrega.responsable?.apellidos || ''}`.trim() || entrega.responsable?.username || '—'}</span><span><strong>Receptor:</strong> {entrega.receptor?.nombre || '—'}{entrega.receptor?.dpi ? ` · DPI ${entrega.receptor.dpi}` : ''}</span><span><strong>Lugar:</strong> {entrega.lugar_entrega || '—'}</span><span><strong>Observaciones:</strong> {entrega.observaciones || '—'}</span></div>{entrega.detalles?.length > 0 ? <DataTable columns={[{ key: 'especie.nombre_comun', label: 'Especie', sortable: true }, { key: 'lote.codigo', label: 'Lote', sortable: true }, { key: 'cantidad_entregada', label: 'Cantidad', sortable: true }]} data={entrega.detalles} getRowKey={(item) => item.id} emptyMessage="Sin detalle entregado todavía." /> : <p className="form-help">Sin detalle entregado todavía.</p>}</article>
 }
 
 function BeneficiarioForm({ form, saving, onChange, onSubmit, onClose }) {
@@ -113,6 +140,7 @@ function SolicitudesView({ currentUser, onToast, onSessionInvalid }) {
   const canCreate = WRITE_ROLES.includes(role)
   const canDecide = DECISION_ROLES.includes(role)
   const [solicitudes, setSolicitudes] = useState([])
+  const [entregas, setEntregas] = useState([])
   const [beneficiaries, setBeneficiaries] = useState([])
   const [inventory, setInventory] = useState([])
   const [loading, setLoading] = useState(true)
@@ -135,14 +163,16 @@ function SolicitudesView({ currentUser, onToast, onSessionInvalid }) {
   async function cargarDatos() {
     setLoading(true); setError('')
     try {
-      const [solicitudesData, beneficiariesData, inventoryData] = await Promise.all([
+      const [solicitudesData, beneficiariesData, inventoryData, entregasData] = await Promise.all([
         guardedCall(() => obtenerSolicitudes(), 'No fue posible cargar las solicitudes.'),
         guardedCall(() => obtenerBeneficiarios(), 'No fue posible cargar los beneficiarios.'),
         guardedCall(() => obtenerInventario(), 'No fue posible cargar el inventario.'),
+        guardedCall(() => obtenerEntregas(), 'No fue posible cargar las entregas.'),
       ])
       if (solicitudesData) setSolicitudes(solicitudesData.solicitudes || [])
       if (beneficiariesData) setBeneficiaries(beneficiariesData.beneficiarios || [])
       if (inventoryData) setInventory(inventoryData.inventario || [])
+      if (entregasData) setEntregas(entregasData.entregas || [])
     } catch (err) { setError(err.message) } finally { setLoading(false) }
   }
 
@@ -153,13 +183,28 @@ function SolicitudesView({ currentUser, onToast, onSessionInvalid }) {
 
   async function abrirDetalle(id) {
     setMovementsLoading(true)
-    try { const response = await guardedCall(() => obtenerSolicitud(id), 'No fue posible cargar la solicitud.'); if (response) setDetalle(response.solicitud); setDetalleTab('informacion') } catch (err) { onToast(err.message, 'error') } finally { setMovementsLoading(false) }
+    try {
+      const response = await guardedCall(() => obtenerSolicitud(id), 'No fue posible cargar la solicitud.')
+      if (!response) return
+
+      const solicitud = response.solicitud
+      const entregasSolicitud = activeTab === 'HISTORICO' ? entregasDeSolicitud(entregas, id).sort((left, right) => Number(left.id) - Number(right.id)) : []
+      const entregasDetalle = await Promise.all(entregasSolicitud.map((entrega) => guardedCall(() => obtenerEntrega(entrega.id), 'No fue posible cargar una entrega histórica.')))
+      setDetalle({ ...solicitud, historico: entregasDetalle.filter(Boolean).map((item) => item.entrega).filter(Boolean) })
+      setDetalleTab('informacion')
+    } catch (err) { onToast(err.message, 'error') } finally { setMovementsLoading(false) }
   }
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
-    return solicitudes.filter((item) => item.estado.codigo === activeTab && `${item.codigo} ${item.beneficiario?.codigo} ${item.beneficiario?.nombre} ${item.beneficiario?.tipo} ${item.estado?.codigo} ${item.usuario_creacion?.nombres} ${item.usuario_creacion?.apellidos}`.toLowerCase().includes(term))
-  }, [solicitudes, activeTab, search])
+    return solicitudes.filter((item) => {
+      const entregasSolicitud = entregasDeSolicitud(entregas, item.id)
+      const textoEntregas = entregasSolicitud.flatMap((entrega) => [entrega.codigo, entrega.estado?.codigo])
+      const texto = [item.codigo, item.beneficiario?.codigo, item.beneficiario?.nombre, item.beneficiario?.tipo, item.estado?.codigo, item.usuario_creacion?.nombres, item.usuario_creacion?.apellidos, ...textoEntregas].filter(Boolean).join(' ').toLowerCase()
+      const coincideTab = activeTab === 'HISTORICO' ? entregasSolicitud.length > 0 : item.estado.codigo === activeTab
+      return coincideTab && texto.includes(term)
+    })
+  }, [solicitudes, entregas, activeTab, search])
 
   const columns = (() => {
     const base = [
@@ -170,6 +215,19 @@ function SolicitudesView({ currentUser, onToast, onSessionInvalid }) {
       { key: 'total_solicitado', label: 'Total solicitado', sortable: true },
     ]
     if (activeTab === 'APROBADA') base.push({ key: 'total_aprobado', label: 'Total aprobado', sortable: true })
+    if (activeTab === 'HISTORICO') {
+      return [
+        { key: 'codigo', label: 'Solicitud', sortable: true },
+        { key: 'beneficiario.nombre', label: 'Beneficiario', sortable: true },
+        { key: 'estado.codigo', label: 'Estado solicitud', sortable: true, render: (item) => <SolicitudStatusBadge estado={item.estado.codigo} /> },
+        { key: 'distribucion', label: 'Distribución', sortable: false, render: (item) => <DistribucionBadges entregas={entregasDeSolicitud(entregas, item.id)} /> },
+        { key: 'total_aprobado', label: 'Aprobadas', sortable: true },
+        { key: 'total_entregado', label: 'Entregadas', sortable: true, render: (item) => totalEntregadoDeEntregas(entregasDeSolicitud(entregas, item.id)) },
+        { key: 'total_pendiente', label: 'Pendientes', sortable: true, render: (item) => Math.max(0, Number(item.total_aprobado || 0) - totalEntregadoDeEntregas(entregasDeSolicitud(entregas, item.id))) },
+        { key: 'entregas', label: 'Entregas', sortable: true, render: (item) => entregasDeSolicitud(entregas, item.id).length },
+        { key: 'acciones', label: 'Acciones', sortable: false, render: (item) => <button type="button" onClick={() => abrirDetalle(item.id)}>Ver</button> },
+      ]
+    }
     base.push({ key: 'estado.codigo', label: 'Estado', sortable: true, render: (item) => <SolicitudStatusBadge estado={item.estado.codigo} /> })
     base.push({ key: 'usuario_creacion', label: 'Creado por', sortable: true, sortValue: (item) => `${item.usuario_creacion?.nombres || ''} ${item.usuario_creacion?.apellidos || ''}`, render: (item) => `${item.usuario_creacion?.nombres || ''} ${item.usuario_creacion?.apellidos || ''}` })
     base.push({ key: 'acciones', label: 'Acciones', sortable: false, render: (item) => <button type="button" onClick={() => abrirDetalle(item.id)}>Ver</button> })
@@ -212,6 +270,7 @@ function SolicitudesView({ currentUser, onToast, onSessionInvalid }) {
     { key: 'cantidad_solicitada', label: 'Cantidad solicitada', sortable: true },
     { key: 'cantidad_aprobada', label: 'Cantidad aprobada', sortable: true },
     { key: 'cantidad_entregada', label: 'Cantidad entregada', sortable: true },
+    { key: 'cantidad_pendiente', label: 'Cantidad pendiente', sortable: true, render: (item) => Math.max(0, Number(item.cantidad_aprobada || 0) - Number(item.cantidad_entregada || 0)) },
   ]
 
   if (detalle) {
@@ -222,7 +281,7 @@ function SolicitudesView({ currentUser, onToast, onSessionInvalid }) {
         <div className="catalog-tabs detalle-tabs" role="tablist" aria-label="Detalle de solicitud"><button type="button" className={`catalog-tab ${detalleTab === 'informacion' ? 'catalog-tab-active' : ''}`} onClick={() => setDetalleTab('informacion')}>Información</button><button type="button" className={`catalog-tab ${detalleTab === 'plantas' ? 'catalog-tab-active' : ''}`} onClick={() => setDetalleTab('plantas')}>Plantas solicitadas</button></div>
         {movementsLoading ? <div className="empty-state">Cargando solicitud...</div> : null}
         {detalleTab === 'informacion' && <div className="detalle-card"><div className="info-grid"><div className="info-card"><div className="info-card-title">Código</div><div className="info-card-value">{detalle.codigo}</div></div><div className="info-card"><div className="info-card-title">Fecha solicitud</div><div className="info-card-value">{formatearFecha(detalle.fecha_solicitud)}</div></div><div className="info-card"><div className="info-card-title">Beneficiario</div><div className="info-card-value">{detalle.beneficiario?.nombre}</div></div><div className="info-card"><div className="info-card-title">Tipo beneficiario</div><div className="info-card-value">{detalle.beneficiario?.tipo}</div></div><div className="info-card"><div className="info-card-title">Creado por</div><div className="info-card-value">{detalle.usuario_creacion?.nombres} {detalle.usuario_creacion?.apellidos}</div></div><div className="info-card"><div className="info-card-title">Fecha creación</div><div className="info-card-value">{formatearFecha(detalle.fecha_creacion)}</div></div></div><div className="detalle-section"><h3>Motivo</h3><p className="observaciones-text">{detalle.motivo || '—'}</p><h3>Observaciones</h3><p className="observaciones-text">{detalle.observaciones || '—'}</p>{detalle.observacion_revision && <><h3>Motivo de revisión</h3><p className="observaciones-text">{detalle.observacion_revision}</p></>}{detalle.fecha_revision && <p><strong>Fecha revisión:</strong> {formatearFecha(detalle.fecha_revision)}</p>}</div>{estado === 'APROBADA' && <div className="solicitud-reserved-note">Las plantas de esta solicitud se encuentran reservadas para su futura entrega.</div>}{canDecide && estado === 'REGISTRADA' && <div className="detalle-actions"><button type="button" className="button-danger" onClick={() => setModal({ kind: 'rechazar', form: { motivo: '' } })}>Rechazar</button><button type="button" onClick={solicitarAprobacion}>Aprobar solicitud</button></div>}</div>}
-        {detalleTab === 'plantas' && <div className="detalle-card"><DataTable columns={detailColumns} data={detalle.detalles || []} getRowKey={(item) => item.id} emptyMessage="No hay plantas solicitadas." /></div>}
+        {detalleTab === 'plantas' && <div className="detalle-card"><DataTable columns={detailColumns} data={detalle.detalles || []} getRowKey={(item) => item.id} emptyMessage="No hay plantas solicitadas." />{detalle.historico?.length > 0 && <div className="historico-distribucion"><h3>Historial de distribución / entregas</h3>{detalle.historico.map((entrega) => <EntregaHistorica entrega={entrega} key={entrega.id} />)}</div>}</div>}
       </div>
       {modal?.kind === 'rechazar' && <Modal title="Rechazar solicitud" size="wide" onClose={() => setModal(null)}><form className="catalog-form" onSubmit={guardarRechazo}><div className="modal-info"><p><strong>Solicitud:</strong> {detalle.codigo}</p><p><strong>Beneficiario:</strong> {detalle.beneficiario?.nombre}</p><p><strong>Total solicitado:</strong> {(detalle.detalles || []).reduce((sum, item) => sum + Number(item.cantidad_solicitada || 0), 0)} plantas</p></div><div className="catalog-form-grid"><div className="catalog-span-full"><label htmlFor="motivo_rechazo">Motivo de rechazo *</label><textarea id="motivo_rechazo" rows="4" value={modal.form.motivo} onChange={(event) => setModal((current) => ({ ...current, form: { motivo: event.target.value } }))} required /></div></div><div className="modal-actions"><button className="button-secondary" type="button" onClick={() => setModal(null)}>Volver</button><button className="button-danger" type="submit" disabled={saving}>Confirmar rechazo</button></div></form></Modal>}
       <ConfirmDialog dialog={confirmDialog} onCancel={() => setConfirmDialog(null)} onConfirm={confirmarAprobacion} />

@@ -353,6 +353,7 @@ CREATE TABLE IF NOT EXISTS sod_solicitudes_detalle (
     sod_id INT AUTO_INCREMENT PRIMARY KEY,
     sod_id_solicitud INT NOT NULL,
     sod_id_especie INT NOT NULL,
+    sod_id_inventario INT NOT NULL,
     sod_cantidad_solicitada INT NOT NULL,
     sod_cantidad_aprobada INT NOT NULL DEFAULT 0,
     sod_cantidad_entregada INT NOT NULL DEFAULT 0,
@@ -363,10 +364,12 @@ CREATE TABLE IF NOT EXISTS sod_solicitudes_detalle (
     
     CONSTRAINT fk_sod_solicitud FOREIGN KEY (sod_id_solicitud) REFERENCES sol_solicitudes(sol_id),
     CONSTRAINT fk_sod_especie FOREIGN KEY (sod_id_especie) REFERENCES esp_especies(esp_id),
+    CONSTRAINT fk_sod_inventario FOREIGN KEY (sod_id_inventario) REFERENCES inv_inventario(inv_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT uk_sod_solicitud_especie UNIQUE (sod_id_solicitud, sod_id_especie),
     
     INDEX idx_sod_id_solicitud (sod_id_solicitud),
     INDEX idx_sod_id_especie (sod_id_especie),
+    INDEX idx_sod_inventario (sod_id_inventario),
     INDEX idx_sod_estado (sod_estado)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

@@ -9,10 +9,11 @@ import {
   registrarPerdidaInventario,
   registrarAjustePositivoInventario,
   registrarAjusteNegativoInventario,
+  obtenerSolicitudes,
+  obtenerEntregas,
 } from '../../services/api'
 
 const WRITE_ROLES = ['ADMIN', 'VIVERO']
-const ESTADO_FILTROS = ['TODOS', 'ACTIVOS', 'SIN_EXISTENCIA']
 
 function mapError(error, fallbackMessage) {
   if (error?.status === 403) return 'No tiene permisos para realizar esta operación.'
@@ -38,6 +39,22 @@ function EstadoInventarioBadge({ inventario }) {
   return estadoInventario(inventario) === 'ACTIVO'
     ? <StatusBadge active />
     : <span className="status-badge status-inactive">Sin existencia</span>
+}
+
+function esInventarioActual(inventario) {
+  return Number(inventario?.estado) === 1 && Number(inventario?.cantidad_total) > 0
+}
+
+function EstadoTrazabilidadBadge({ codigo }) {
+  const className = codigo === 'ATENDIDA' || codigo === 'ENTREGADA' ? 'status-active' : codigo === 'RECHAZADA' || codigo === 'CANCELADO' ? 'status-rejected' : 'status-inactive'
+  return <span className={`status-badge ${className}`}>{codigo || '—'}</span>
+}
+
+function TrazabilidadRelacionada({ movimientos, solicitudesPorId, entregasPorId }) {
+  const solicitudIds = [...new Set(movimientos.filter((item) => item.referencia === 'SOLICITUD' && item.id_referencia).map((item) => Number(item.id_referencia)))]
+  const entregaIds = [...new Set(movimientos.filter((item) => item.referencia === 'ENTREGA' && item.id_referencia).map((item) => Number(item.id_referencia)))]
+
+  return <div className="detalle-section inventario-trazabilidad"><h3>Trazabilidad relacionada</h3><div className="trazabilidad-block"><strong>Solicitudes relacionadas</strong>{solicitudIds.length > 0 ? solicitudIds.map((id) => { const solicitud = solicitudesPorId.get(id); return <div className="trazabilidad-row" key={id}><span>{solicitud?.codigo || `Solicitud ${id}`}</span><EstadoTrazabilidadBadge codigo={solicitud?.estado?.codigo} /></div> }) : <p>Sin solicitudes relacionadas.</p>}</div><div className="trazabilidad-block"><strong>Entregas relacionadas</strong>{entregaIds.length > 0 ? entregaIds.map((id) => { const entrega = entregasPorId.get(id); return <div className="trazabilidad-row" key={id}><span>{entrega?.codigo || `Entrega ${id}`}</span><EstadoTrazabilidadBadge codigo={entrega?.estado?.codigo} /></div> }) : <p>Sin entregas relacionadas.</p>}</div></div>
 }
 
 function tipoMovimientoLabel(tipo) {
@@ -144,18 +161,22 @@ function OperacionInventarioModal({ modal, inventario, saving, onClose, onSubmit
 
 function InventarioView({ currentUser, onToast, onSessionInvalid }) {
   const [inventario, setInventario] = useState([])
+  const [solicitudes, setSolicitudes] = useState([])
+  const [entregas, setEntregas] = useState([])
   const [detalle, setDetalle] = useState(null)
   const [movimientos, setMovimientos] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadingDetalle, setLoadingDetalle] = useState(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [estadoFiltro, setEstadoFiltro] = useState('TODOS')
+  const [pestana, setPestana] = useState('ACTUAL')
   const [detalleTab, setDetalleTab] = useState('informacion')
   const [modal, setModal] = useState(null)
   const [saving, setSaving] = useState(false)
 
   const canWrite = WRITE_ROLES.includes(currentUser?.rol?.codigo)
+  const solicitudesPorId = useMemo(() => new Map(solicitudes.map((solicitud) => [Number(solicitud.id), solicitud])), [solicitudes])
+  const entregasPorId = useMemo(() => new Map(entregas.map((entrega) => [Number(entrega.id), entrega])), [entregas])
 
   async function guardedCall(call, fallbackMessage) {
     try {
@@ -204,6 +225,13 @@ function InventarioView({ currentUser, onToast, onSessionInvalid }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarInventario()
+    Promise.all([
+      guardedCall(() => obtenerSolicitudes(), 'No fue posible cargar las solicitudes.'),
+      guardedCall(() => obtenerEntregas(), 'No fue posible cargar las entregas.'),
+    ]).then(([solicitudesData, entregasData]) => {
+      if (solicitudesData) setSolicitudes(solicitudesData.solicitudes || [])
+      if (entregasData) setEntregas(entregasData.entregas || [])
+    }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -224,8 +252,8 @@ function InventarioView({ currentUser, onToast, onSessionInvalid }) {
     const term = search.toLowerCase()
 
     return inventario.filter((item) => {
-      const estado = estadoInventario(item)
-      const estadoOk = estadoFiltro === 'TODOS' || estadoFiltro === estado
+      const estado = esInventarioActual(item) ? 'ACTIVO' : 'HISTORICO'
+      const estadoOk = pestana === 'ACTUAL' ? estado === 'ACTIVO' : estado === 'HISTORICO'
       const searchOk = !term || [
         item.lote?.codigo,
         item.especie?.codigo,
@@ -237,9 +265,11 @@ function InventarioView({ currentUser, onToast, onSessionInvalid }) {
 
       return estadoOk && searchOk
     })
-  }, [inventario, search, estadoFiltro])
+  }, [inventario, search, pestana])
 
-  const inventarioColumns = [
+  const inventarioAccionesColumn = { key: 'acciones', label: 'Acciones', sortable: false, render: (item) => <button type="button" onClick={() => abrirDetalle(item)}>Ver</button> }
+
+  const inventarioActualColumns = [
     { key: 'lote.codigo', label: 'Lote', sortable: true },
     { key: 'especie.nombre_comun', label: 'Especie', sortable: true },
     { key: 'area.nombre', label: 'Área', sortable: true },
@@ -247,9 +277,19 @@ function InventarioView({ currentUser, onToast, onSessionInvalid }) {
     { key: 'cantidad_reservada', label: 'Cantidad reservada', sortable: true },
     { key: 'cantidad_disponible', label: 'Cantidad disponible', sortable: true },
     { key: 'fecha_disponibilidad', label: 'Fecha disponibilidad', sortable: true, render: (item) => formatearFecha(item.fecha_disponibilidad) },
-    { key: 'estado', label: 'Estado', sortable: true, sortValue: (item) => estadoInventario(item), render: (item) => <EstadoInventarioBadge inventario={item} /> },
-    { key: 'acciones', label: 'Acciones', sortable: false, render: (item) => <button type="button" onClick={() => abrirDetalle(item)}>Ver</button> },
+    inventarioAccionesColumn,
   ]
+
+  const inventarioHistoricoColumns = [
+    { key: 'lote.codigo', label: 'Lote', sortable: true },
+    { key: 'especie.nombre_comun', label: 'Especie', sortable: true },
+    { key: 'area.nombre', label: 'Área', sortable: true },
+    { key: 'fecha_disponibilidad', label: 'Fecha disponibilidad', sortable: true, render: (item) => formatearFecha(item.fecha_disponibilidad) },
+    { key: 'estado', label: 'Estado', sortable: true, sortValue: (item) => estadoInventario(item), render: (item) => <EstadoInventarioBadge inventario={item} /> },
+    inventarioAccionesColumn,
+  ]
+
+  const inventarioColumns = pestana === 'ACTUAL' ? inventarioActualColumns : inventarioHistoricoColumns
 
   const movimientosColumns = [
     { key: 'tipo', label: 'Tipo', sortable: true, render: (item) => tipoMovimientoLabel(item.tipo) },
@@ -333,6 +373,7 @@ function InventarioView({ currentUser, onToast, onSessionInvalid }) {
 
   const sinExistencia = detalle ? estadoInventario(detalle) === 'SIN_EXISTENCIA' : false
   const sinDisponible = detalle ? Number(detalle.cantidad_disponible) <= 0 : true
+  const esHistorico = detalle ? !esInventarioActual(detalle) : false
 
   return (
     <section className={`inventario-view ${!detalle ? 'inventario-view-listado' : ''}`} aria-labelledby="inventario-title">
@@ -346,7 +387,7 @@ function InventarioView({ currentUser, onToast, onSessionInvalid }) {
             </div>
           </header>
 
-          <div className="data-card inventario-table-card" role="region" aria-live="polite">
+            <div className="data-card inventario-table-card" role="region" aria-live="polite">
             <div className="inventario-toolbar">
               <input
                 className="user-search"
@@ -356,16 +397,11 @@ function InventarioView({ currentUser, onToast, onSessionInvalid }) {
                 aria-label="Buscar inventario por lote, especie, área o estado"
               />
 
-              <select
-                className="catalog-filter"
-                value={estadoFiltro}
-                onChange={(event) => setEstadoFiltro(event.target.value)}
-                aria-label="Filtrar por estado de inventario"
-              >
-                {ESTADO_FILTROS.map((estado) => (
-                  <option key={estado} value={estado}>{estado === 'TODOS' ? 'Todos' : estado === 'ACTIVOS' ? 'Activos' : 'Sin existencia'}</option>
-                ))}
-              </select>
+            </div>
+
+            <div className="catalog-tabs inventario-tabs" role="tablist" aria-label="Vistas de inventario">
+              <button type="button" className={`catalog-tab ${pestana === 'ACTUAL' ? 'catalog-tab-active' : ''}`} onClick={() => setPestana('ACTUAL')}>Actual</button>
+              <button type="button" className={`catalog-tab ${pestana === 'HISTORICO' ? 'catalog-tab-active' : ''}`} onClick={() => setPestana('HISTORICO')}>Histórico</button>
             </div>
 
             {loading ? (
@@ -373,7 +409,7 @@ function InventarioView({ currentUser, onToast, onSessionInvalid }) {
             ) : error ? (
               <div className="empty-state error-state">{error}</div>
             ) : (
-              <DataTable columns={inventarioColumns} data={filteredInventario} getRowKey={(item) => item.id} emptyMessage="No hay existencias disponibles registradas." />
+              <DataTable columns={inventarioColumns} data={filteredInventario} getRowKey={(item) => item.id} emptyMessage={pestana === 'ACTUAL' ? 'No hay inventario operativo registrado.' : 'No hay inventario histórico registrado.'} />
             )}
           </div>
         </>
@@ -419,7 +455,9 @@ function InventarioView({ currentUser, onToast, onSessionInvalid }) {
                   </div>
                 </div>
 
-                {canWrite && (
+                <TrazabilidadRelacionada movimientos={movimientos} solicitudesPorId={solicitudesPorId} entregasPorId={entregasPorId} />
+
+                {canWrite && !esHistorico && (
                   <div className="detalle-actions inventario-actions">
                     {!sinExistencia && !sinDisponible && <button type="button" className="button-danger" onClick={() => abrirModal('perdida')}>Registrar pérdida</button>}
                     <button type="button" onClick={() => abrirModal('ajustePositivo')}>Ajuste positivo</button>

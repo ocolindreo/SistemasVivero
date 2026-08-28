@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import Modal from '../../components/Modal'
-import StatusBadge from '../../components/StatusBadge'
 import DataTable from '../../components/DataTable'
 import {
   obtenerLotes,
@@ -17,6 +16,7 @@ import {
 
 const ETAPAS_PRODUCCION = ['PLANIFICADO', 'SIEMBRA', 'GERMINACION', 'CRECIMIENTO', 'ENDURECIMIENTO', 'DISPONIBLE', 'FINALIZADO']
 const ETAPAS_CON_CANCELADO = [...ETAPAS_PRODUCCION, 'CANCELADO']
+const ETAPAS_ACTUALES = ['PLANIFICADO', 'SIEMBRA', 'GERMINACION', 'CRECIMIENTO', 'ENDURECIMIENTO', 'DISPONIBLE']
 
 const WRITE_PERMISSIONS = {
   crear: ['ADMIN', 'VIVERO'],
@@ -107,6 +107,7 @@ function ProduccionView({ currentUser, onToast, onSessionInvalid }) {
   const [errorLotes, setErrorLotes] = useState('')
   const [search, setSearch] = useState('')
   const [filtroEtapa, setFiltroEtapa] = useState('TODOS')
+  const [pestana, setPestana] = useState('ACTUAL')
 
   const [species, setSpecies] = useState([])
   const [areas, setAreas] = useState([])
@@ -206,6 +207,8 @@ function ProduccionView({ currentUser, onToast, onSessionInvalid }) {
   const lotesFiltered = useMemo(() => {
     const termino = search.toLowerCase()
     return lotes.filter((lote) => {
+      const esHistorico = !ETAPAS_ACTUALES.includes(lote.etapa?.codigo)
+      const pestanaOk = pestana === 'ACTUAL' ? !esHistorico : esHistorico
       const filtroEtapaOk = filtroEtapa === 'TODOS' || lote.etapa?.codigo === filtroEtapa
       const busquedaOk = !termino || [
         lote.codigo,
@@ -221,27 +224,56 @@ function ProduccionView({ currentUser, onToast, onSessionInvalid }) {
         .toLowerCase()
         .includes(termino)
 
-      return filtroEtapaOk && busquedaOk
+      return pestanaOk && filtroEtapaOk && busquedaOk
     })
-  }, [lotes, search, filtroEtapa])
+  }, [lotes, search, filtroEtapa, pestana])
 
-  const lotesColumns = [
+  const responsableColumn = {
+    key: 'responsable',
+    label: 'Responsable',
+    sortable: true,
+    sortValue: (lote) => `${lote.responsable?.nombres || ''} ${lote.responsable?.apellidos || ''}`,
+    render: (lote) => `${lote.responsable?.nombres || ''} ${lote.responsable?.apellidos || ''}`,
+  }
+
+  const accionesColumn = {
+    key: 'acciones',
+    label: 'Acciones',
+    sortable: false,
+    render: (lote) => <button type="button" onClick={() => abrirDetalle(lote.id)}>Ver</button>,
+  }
+
+  const produccionActualColumns = [
     { key: 'codigo', label: 'Código', sortable: true },
     { key: 'especie.nombre_comun', label: 'Especie', sortable: true },
     { key: 'cantidad_inicial', label: 'Cantidad inicial', sortable: true },
     { key: 'cantidad_actual', label: 'Cantidad actual', sortable: true },
-    { key: 'etapa.codigo', label: 'Etapa actual', sortable: true },
+    { key: 'etapa.codigo', label: 'Etapa', sortable: true },
     { key: 'area.nombre', label: 'Área', sortable: true },
-    { key: 'responsable', label: 'Responsable', sortable: true, sortValue: (lote) => `${lote.responsable?.nombres || ''} ${lote.responsable?.apellidos || ''}`, render: (lote) => `${lote.responsable?.nombres || ''} ${lote.responsable?.apellidos || ''}` },
-    {
-      key: 'estado',
-      label: 'Estado',
-      sortable: true,
-      sortValue: (lote) => (lote.etapa?.codigo === 'CANCELADO' ? 'Cancelado' : Number(lote.estado) === 1 ? 'Activo' : 'Inactivo'),
-      render: (lote) => lote.etapa?.codigo === 'CANCELADO' ? <span className="status-badge status-inactive">Cancelado</span> : <StatusBadge active={Number(lote.estado) === 1} />,
-    },
-    { key: 'acciones', label: 'Acciones', sortable: false, render: (lote) => <button type="button" onClick={() => abrirDetalle(lote.id)}>Ver</button> },
+    responsableColumn,
+    accionesColumn,
   ]
+
+  const produccionHistoricoColumns = [
+    { key: 'codigo', label: 'Código', sortable: true },
+    { key: 'especie.nombre_comun', label: 'Especie', sortable: true },
+    { key: 'cantidad_inicial', label: 'Cantidad inicial', sortable: true },
+    { key: 'cantidad_actual', label: 'Cantidad final', sortable: true },
+    {
+      key: 'etapa.codigo',
+      label: 'Estado final',
+      sortable: true,
+      render: (lote) => (
+        <span className={`status-badge ${lote.etapa?.codigo === 'CANCELADO' ? 'status-inactive' : 'status-active'}`}>
+          {lote.etapa?.codigo}
+        </span>
+      ),
+    },
+    responsableColumn,
+    accionesColumn,
+  ]
+
+  const lotesColumns = pestana === 'ACTUAL' ? produccionActualColumns : produccionHistoricoColumns
 
   const historialColumns = [
     { key: 'estado.codigo', label: 'Etapa', sortable: true },
@@ -388,6 +420,7 @@ function ProduccionView({ currentUser, onToast, onSessionInvalid }) {
   }
 
   const mermaAcumulada = detalleLote ? detalleLote.cantidad_inicial - detalleLote.cantidad_actual : 0
+  const detalleEsHistorico = detalleLote ? !ETAPAS_ACTUALES.includes(detalleLote.etapa_actual?.codigo) : false
 
   return (
     <section className={`produccion-view ${!detalleLote ? 'produccion-view-listado' : ''}`} aria-labelledby="produccion-title">
@@ -447,12 +480,17 @@ function ProduccionView({ currentUser, onToast, onSessionInvalid }) {
               </select>
             </div>
 
+            <div className="catalog-tabs produccion-tabs" role="tablist" aria-label="Vistas de producción">
+              <button type="button" className={`catalog-tab ${pestana === 'ACTUAL' ? 'catalog-tab-active' : ''}`} onClick={() => setPestana('ACTUAL')}>Actual</button>
+              <button type="button" className={`catalog-tab ${pestana === 'HISTORICO' ? 'catalog-tab-active' : ''}`} onClick={() => setPestana('HISTORICO')}>Histórico</button>
+            </div>
+
             {loadingLotes ? (
               <div className="empty-state">Cargando lotes...</div>
             ) : errorLotes ? (
               <div className="empty-state error-state">{errorLotes}</div>
             ) : (
-              <DataTable columns={lotesColumns} data={lotesFiltered} getRowKey={(lote) => lote.id} emptyMessage="No hay lotes de producción registrados." />
+              <DataTable columns={lotesColumns} data={lotesFiltered} getRowKey={(lote) => lote.id} emptyMessage={pestana === 'ACTUAL' ? 'No hay lotes actuales de producción registrados.' : 'No hay lotes históricos de producción registrados.'} />
             )}
           </div>
         </>
@@ -512,7 +550,7 @@ function ProduccionView({ currentUser, onToast, onSessionInvalid }) {
                 )}
 
                 <div className="detalle-actions">
-                  {canWrite.editar && detalleLote.etapa_actual?.codigo !== 'CANCELADO' && (
+                  {canWrite.editar && !detalleEsHistorico && (
                     <button
                       type="button"
                       className="button-secondary"
@@ -570,7 +608,7 @@ function ProduccionView({ currentUser, onToast, onSessionInvalid }) {
                   )}
                 </div>
 
-                {detalleLote.etapa_actual && detalleLote.siguiente_etapa && canWrite.avanzar && detalleLote.etapa_actual.codigo !== 'FINALIZADO' && (
+                {detalleLote.etapa_actual && detalleLote.siguiente_etapa && canWrite.avanzar && !detalleEsHistorico && (
                   <div className="siguiente-etapa">
                     <h3>Siguiente etapa</h3>
                     <p>{detalleLote.siguiente_etapa.codigo}</p>
@@ -597,7 +635,7 @@ function ProduccionView({ currentUser, onToast, onSessionInvalid }) {
                   </div>
                 )}
 
-                {detalleLote.etapa_actual && canWrite.cancelar && detalleLote.etapa_actual.codigo !== 'FINALIZADO' && detalleLote.etapa_actual.codigo !== 'CANCELADO' && (
+                {detalleLote.etapa_actual && canWrite.cancelar && !detalleEsHistorico && detalleLote.etapa_actual.codigo !== 'DISPONIBLE' && (
                   <div className="cancelar-section">
                     <button
                       type="button"
