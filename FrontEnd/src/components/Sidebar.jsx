@@ -5,7 +5,6 @@ const navigationItems = [
   { label: 'Producción', view: 'produccion', available: true },
   { label: 'Inventario', view: 'inventario', available: true },
   { label: 'Solicitudes', view: 'solicitudes', available: true },
-  { label: 'Reservas', available: false },
   { label: 'Entregas', view: 'entregas', available: true },
   { label: 'Reportes', available: false },
 ]

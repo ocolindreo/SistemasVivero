@@ -170,6 +170,31 @@
 .entrega-confirm-row span, .entrega-confirm-row small { color: var(--color-text-secondary); font-size: 12px; }
 .entrega-confirm-row label { display: grid; gap: 6px; min-width: 140px; margin: 0; }
 .entrega-confirm-row input { padding: 10px 12px; }
+
+.constancia-entrega { display: none; }
+
+@media print {
+  @page { size: letter; margin: 12mm; }
+
+  body { background: #fff; }
+  body * { visibility: hidden; }
+  .constancia-entrega, .constancia-entrega * { visibility: visible; }
+  .constancia-entrega { display: block; position: absolute; inset: 0; width: 100%; color: #000; font-family: Georgia, 'Times New Roman', serif; font-size: 10pt; line-height: 1.25; }
+  .constancia-header { padding-bottom: 8px; border-bottom: 2px solid #000; text-align: center; }
+  .constancia-header p { margin: 0 0 3px; font-size: 12pt; font-weight: 700; text-transform: uppercase; }
+  .constancia-header h1 { margin: 0; font-size: 16pt; }
+  .constancia-reference { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px 14px; margin: 12px 0; }
+  .constancia-reference p, .constancia-entrega section p { margin: 0 0 4px; }
+  .constancia-entrega section { margin-top: 12px; break-inside: avoid; }
+  .constancia-entrega h2 { margin: 0 0 6px; padding-bottom: 3px; border-bottom: 1px solid #000; font-size: 11pt; text-transform: uppercase; }
+  .constancia-detalle table { width: 100%; border-collapse: collapse; }
+  .constancia-detalle th, .constancia-detalle td { padding: 5px; border: 1px solid #000; text-align: left; }
+  .constancia-detalle th { font-weight: 700; }
+  .constancia-firmas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; margin-top: 34px; text-align: center; break-inside: avoid; }
+  .constancia-firmas div { display: grid; gap: 4px; }
+  .constancia-firma-linea { border-top: 1px solid #000; }
+  .constancia-trazabilidad { display: grid; gap: 2px; margin-top: 18px; padding-top: 6px; border-top: 1px solid #000; color: #333; font-size: 8pt; break-inside: avoid; }
+}
 .inventario-actions { flex-wrap: wrap; }
 .produccion-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
 .inventario-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
