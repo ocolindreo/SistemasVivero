@@ -8,6 +8,7 @@ import ProduccionView from './features/produccion/ProduccionView'
 import InventarioView from './features/inventario/InventarioView'
 import SolicitudesView from './features/solicitudes/SolicitudesView'
 import EntregasView from './features/entregas/EntregasView'
+import ReportesView from './features/reportes/ReportesView'
 import Toast from './components/Toast'
 import ConfirmDialog from './components/ConfirmDialog'
 import './App.css'
@@ -140,13 +141,14 @@ function App() {
       setVistaActual('inicio')
       showToast('La sesión ha expirado. Inicie sesión nuevamente.', 'warning')
     }
+    const canViewReportes = ['ADMIN', 'VIVERO'].includes(authenticatedUser.rol?.codigo)
 
     return (
       <div className="authenticated-shell">
-        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} activeView={vistaActual} onNavigate={setVistaActual} onLogout={requestLogout} />
+        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} activeView={vistaActual} currentUser={authenticatedUser} onNavigate={setVistaActual} onLogout={requestLogout} />
         <div className="authenticated-main">
-          <Topbar usuario={authenticatedUser} onMenuToggle={() => setSidebarOpen(true)} context={vistaActual === 'usuarios' ? 'Seguridad y Usuarios' : vistaActual === 'catalogos' ? 'Catálogos' : vistaActual === 'produccion' ? 'Producción' : vistaActual === 'inventario' ? 'Inventario' : vistaActual === 'solicitudes' ? 'Solicitudes' : vistaActual === 'entregas' ? 'Distribución / Entregas' : 'Inicio'} />
-          {vistaActual === 'usuarios' ? <UsuariosView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'catalogos' ? <CatalogosView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'produccion' ? <ProduccionView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'inventario' ? <InventarioView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'solicitudes' ? <SolicitudesView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'entregas' ? <EntregasView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : <main className="workspace" aria-labelledby="workspace-title">
+          <Topbar usuario={authenticatedUser} onMenuToggle={() => setSidebarOpen(true)} context={vistaActual === 'usuarios' ? 'Seguridad y Usuarios' : vistaActual === 'catalogos' ? 'Catálogos' : vistaActual === 'produccion' ? 'Producción' : vistaActual === 'inventario' ? 'Inventario' : vistaActual === 'solicitudes' ? 'Solicitudes' : vistaActual === 'entregas' ? 'Distribución / Entregas' : vistaActual === 'reportes' ? 'Reportes' : 'Inicio'} />
+          {vistaActual === 'usuarios' ? <UsuariosView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'catalogos' ? <CatalogosView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'produccion' ? <ProduccionView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'inventario' ? <InventarioView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'solicitudes' ? <SolicitudesView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'entregas' ? <EntregasView currentUser={authenticatedUser} onToast={showToast} onSessionInvalid={handleSessionInvalid} /> : vistaActual === 'reportes' && canViewReportes ? <ReportesView currentUser={authenticatedUser} onSessionInvalid={handleSessionInvalid} /> : <main className="workspace" aria-labelledby="workspace-title">
             <div className="page-heading">
               <span className="page-kicker">Inicio</span>
               <h1 id="workspace-title">Bienvenido, {authenticatedUser.nombres}</h1>

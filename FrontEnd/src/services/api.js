@@ -127,6 +127,17 @@ export const crearSolicitud = (datos) => request('/api/solicitudes', { method: '
 export const aprobarSolicitud = (id) => request(`/api/solicitudes/${id}/aprobar`, { method: 'POST' })
 export const rechazarSolicitud = (id, datos) => request(`/api/solicitudes/${id}/rechazar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
 
+export const obtenerDashboardReportes = () => request('/api/reportes/dashboard')
+const obtenerReporte = (nombre, fechaDesde, fechaHasta) => {
+  const parametros = fechaDesde && fechaHasta ? `?fecha_desde=${encodeURIComponent(fechaDesde)}&fecha_hasta=${encodeURIComponent(fechaHasta)}` : ''
+  return request(`/api/reportes/${nombre}${parametros}`)
+}
+export const obtenerReporteGeneral = (fechaDesde, fechaHasta) => obtenerReporte('general', fechaDesde, fechaHasta)
+export const obtenerReporteProduccion = (fechaDesde, fechaHasta) => obtenerReporte('produccion', fechaDesde, fechaHasta)
+export const obtenerReporteInventario = (fechaDesde, fechaHasta) => obtenerReporte('inventario', fechaDesde, fechaHasta)
+export const obtenerReporteSolicitudes = (fechaDesde, fechaHasta) => obtenerReporte('solicitudes', fechaDesde, fechaHasta)
+export const obtenerReporteEntregas = (fechaDesde, fechaHasta) => obtenerReporte('entregas', fechaDesde, fechaHasta)
+
 export const obtenerEntregas = () => request('/api/entregas')
 export const obtenerEntrega = (id) => request(`/api/entregas/${id}`)
 export const crearEntrega = (datos) => request('/api/entregas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })

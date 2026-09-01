@@ -16,6 +16,7 @@ const produccionRoutes = require('./routes/produccion.routes');
 const inventarioRoutes = require('./routes/inventario.routes');
 const solicitudesRoutes = require('./routes/solicitudes.routes');
 const entregasRoutes = require('./routes/entregas.routes');
+const reportesRoutes = require('./routes/reportes.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,6 +39,7 @@ app.use('/api/produccion', produccionRoutes);
 app.use('/api/inventario', inventarioRoutes);
 app.use('/api/solicitudes', solicitudesRoutes);
 app.use('/api/entregas', entregasRoutes);
+app.use('/api/reportes', reportesRoutes);
 
 // Rutas de prueba
 app.get('/', (req, res) => {

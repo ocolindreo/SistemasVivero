@@ -6,10 +6,13 @@ const navigationItems = [
   { label: 'Inventario', view: 'inventario', available: true },
   { label: 'Solicitudes', view: 'solicitudes', available: true },
   { label: 'Entregas', view: 'entregas', available: true },
-  { label: 'Reportes', available: false },
+  { label: 'Reportes', view: 'reportes', available: true, roles: ['ADMIN', 'VIVERO'] },
 ]
 
-function Sidebar({ open, onClose, activeView, onNavigate, onLogout }) {
+function Sidebar({ open, onClose, activeView, currentUser, onNavigate, onLogout }) {
+  const role = currentUser?.rol?.codigo
+  const visibleItems = navigationItems.filter((item) => !item.roles || item.roles.includes(role))
+
   return (
     <>
       <button className={`sidebar-scrim ${open ? 'sidebar-scrim-open' : ''}`} type="button" aria-label="Cerrar menú" onClick={onClose} />
@@ -24,7 +27,7 @@ function Sidebar({ open, onClose, activeView, onNavigate, onLogout }) {
 
         <nav>
           <p className="sidebar-label">Módulos</p>
-          {navigationItems.map((item) => (
+          {visibleItems.map((item) => (
             <button
               className={`nav-item ${item.available ? '' : 'nav-item-disabled'} ${item.view === activeView ? 'nav-item-active' : ''}`}
               disabled={!item.available}
