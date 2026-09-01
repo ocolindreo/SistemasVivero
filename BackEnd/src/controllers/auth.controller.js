@@ -3,10 +3,11 @@ const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
+const isProduction = process.env.NODE_ENV === 'production';
 const accessTokenCookieOptions = {
   httpOnly: true,
-  secure: false,
-  sameSite: 'lax',
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax',
   path: '/',
   maxAge: 8 * 60 * 60 * 1000
 };
