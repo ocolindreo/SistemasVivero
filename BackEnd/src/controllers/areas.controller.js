@@ -54,7 +54,9 @@ async function listarAreas(req, res) {
         are_descripcion,
         are_ubicacion,
         are_estado
-       FROM are_areas_vivero
+      FROM are_areas_vivero are
+      LEFT JOIN adm_visibilidad_registros adm ON adm.adm_modulo = 'AREA' AND adm.adm_id_registro = are.are_id
+      WHERE COALESCE(adm.adm_visible, 1) = 1
        ORDER BY are_nombre, are_codigo`
     );
 

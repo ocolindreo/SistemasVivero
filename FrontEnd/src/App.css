@@ -195,6 +195,15 @@
 .reportes-stage-row strong { color: var(--color-primary-dark); }
 .reportes-stage-track { display: block; height: 8px; overflow: hidden; border-radius: 4px; background: var(--color-surface-soft); }
 .reportes-stage-track span { display: block; height: 100%; min-width: 2px; border-radius: inherit; background: var(--color-primary); }
+.administracion-view { box-sizing: border-box; width: 100%; max-width: min(1600px, 100%); margin: 0 auto; padding: 40px; }
+.administracion-header { margin-bottom: 24px; }
+.administracion-header h1 { margin: 8px 0; font-size: 36px; }
+.administracion-header p { margin: 0; color: var(--color-text-secondary); }
+.administracion-table-card { width: 100%; box-sizing: border-box; }
+.administracion-tabs { margin-bottom: 20px; }
+.administracion-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.administracion-toolbar .user-search { margin: 0; }
+.administracion-toolbar .catalog-filter { margin: 0; }
 .entregas-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
 .entrega-summary-item { display: grid; gap: 7px; padding: 15px 16px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); box-shadow: 0 4px 12px rgba(38, 50, 56, .04); }
 .entrega-summary-item span { color: var(--color-text-secondary); font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
@@ -527,6 +536,11 @@ textarea {
 }
 
 @media (max-width: 640px) {
+  .administracion-view { padding: 28px 20px; }
+  .administracion-header h1 { font-size: 30px; }
+  .administracion-toolbar { flex-direction: column; }
+  .administracion-toolbar .user-search,
+  .administracion-toolbar .catalog-filter { width: 100%; max-width: none; }
   .reportes-view { padding: 28px 20px; }
   .reportes-header h1 { font-size: 30px; }
   .reportes-summary-grid, .reportes-summary-grid-extended { grid-template-columns: repeat(2, minmax(0, 1fr)); }

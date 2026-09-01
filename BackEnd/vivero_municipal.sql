@@ -95,6 +95,25 @@ CREATE TABLE IF NOT EXISTS aud_auditorias (
     INDEX idx_aud_fecha (aud_fecha)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- TABLA ADMINISTRATIVA: ADM_VISIBILIDAD_REGISTROS (Visibilidad de registros)
+-- ========================================================
+CREATE TABLE IF NOT EXISTS adm_visibilidad_registros (
+    adm_id INT AUTO_INCREMENT PRIMARY KEY,
+    adm_modulo VARCHAR(50) NOT NULL,
+    adm_id_registro INT NOT NULL,
+    adm_visible TINYINT(1) NOT NULL DEFAULT 1,
+    adm_fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    adm_id_usuario_creacion INT NOT NULL,
+    adm_fecha_modificacion TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    adm_id_usuario_modificacion INT NULL,
+
+    CONSTRAINT fk_adm_usuario_creacion FOREIGN KEY (adm_id_usuario_creacion) REFERENCES usu_usuarios(usu_id),
+    CONSTRAINT fk_adm_usuario_modificacion FOREIGN KEY (adm_id_usuario_modificacion) REFERENCES usu_usuarios(usu_id),
+    CONSTRAINT uk_adm_modulo_registro UNIQUE (adm_modulo, adm_id_registro),
+
+    INDEX idx_adm_modulo_visible (adm_modulo, adm_visible)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ========================================================
 -- FASE 2: CATÁLOGOS
 -- ========================================================

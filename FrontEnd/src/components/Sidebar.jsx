@@ -9,6 +9,7 @@ const navigationItems = [
   { label: 'Solicitudes', view: 'solicitudes', available: true },
   { label: 'Entregas', view: 'entregas', available: true },
   { label: 'Reportes', view: 'reportes', available: true, roles: ['ADMIN', 'VIVERO'] },
+  { label: 'SYSADMIN', view: 'administracion', available: true, roles: ['ADMIN'] },
 ]
 
 function Sidebar({ open, onClose, activeView, currentUser, onNavigate, onLogout }) {

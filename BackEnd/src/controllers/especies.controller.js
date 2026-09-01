@@ -54,7 +54,9 @@ async function listarEspecies(req, res) {
         esp_nombre_cientifico,
         esp_descripcion,
         esp_estado
-       FROM esp_especies
+      FROM esp_especies esp
+      LEFT JOIN adm_visibilidad_registros adm ON adm.adm_modulo = 'ESPECIE' AND adm.adm_id_registro = esp.esp_id
+      WHERE COALESCE(adm.adm_visible, 1) = 1
        ORDER BY esp_nombre_comun, esp_codigo`
     );
 

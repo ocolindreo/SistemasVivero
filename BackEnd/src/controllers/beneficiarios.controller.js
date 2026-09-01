@@ -73,7 +73,9 @@ async function listarBeneficiarios(req, res) {
         ben_email,
         ben_direccion,
         ben_estado
-       FROM ben_beneficiarios
+      FROM ben_beneficiarios ben
+      LEFT JOIN adm_visibilidad_registros adm ON adm.adm_modulo = 'BENEFICIARIO' AND adm.adm_id_registro = ben.ben_id
+      WHERE COALESCE(adm.adm_visible, 1) = 1
        ORDER BY ben_nombre, ben_codigo`
     );
 

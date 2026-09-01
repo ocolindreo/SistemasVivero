@@ -45,6 +45,8 @@ async function listarUsuarios(req, res) {
         r.rol_nombre
        FROM usu_usuarios u
        INNER JOIN rol_roles r ON r.rol_id = u.usu_id_rol
+      LEFT JOIN adm_visibilidad_registros adm ON adm.adm_modulo = 'USUARIO' AND adm.adm_id_registro = u.usu_id
+      WHERE COALESCE(adm.adm_visible, 1) = 1
        ORDER BY u.usu_apellidos, u.usu_nombres`
     );
 

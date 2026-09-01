@@ -127,6 +127,13 @@ export const crearSolicitud = (datos) => request('/api/solicitudes', { method: '
 export const aprobarSolicitud = (id) => request(`/api/solicitudes/${id}/aprobar`, { method: 'POST' })
 export const rechazarSolicitud = (id, datos) => request(`/api/solicitudes/${id}/rechazar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
 
+export const obtenerSysadminUsuarios = () => request('/api/sysadmin/usuarios')
+export const obtenerSysadminEspecies = () => request('/api/sysadmin/especies')
+export const obtenerSysadminAreas = () => request('/api/sysadmin/areas')
+export const obtenerSysadminBeneficiarios = () => request('/api/sysadmin/beneficiarios')
+export const actualizarVisibilidadSysadmin = (modulo, id, visible) => request(`/api/sysadmin/${modulo}/${id}/visibilidad`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visible }) })
+export const restablecerPasswordSysadmin = (id, datos) => request(`/api/sysadmin/usuarios/${id}/restablecer-password`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+
 export const obtenerDashboardReportes = () => request('/api/reportes/dashboard')
 const obtenerReporte = (nombre, fechaDesde, fechaHasta) => {
   const parametros = fechaDesde && fechaHasta ? `?fecha_desde=${encodeURIComponent(fechaDesde)}&fecha_hasta=${encodeURIComponent(fechaHasta)}` : ''
