@@ -1,3 +1,5 @@
+import iconoHoja from '../assets/images/icono-hoja.png'
+
 const navigationItems = [
   { label: 'Inicio', view: 'inicio', available: true },
   { label: 'Seguridad y Usuarios', view: 'usuarios', available: true },
@@ -18,7 +20,7 @@ function Sidebar({ open, onClose, activeView, currentUser, onNavigate, onLogout 
       <button className={`sidebar-scrim ${open ? 'sidebar-scrim-open' : ''}`} type="button" aria-label="Cerrar menú" onClick={onClose} />
       <aside className={`sidebar ${open ? 'sidebar-open' : ''}`} aria-label="Navegación principal">
         <div className="sidebar-brand">
-          <div className="sidebar-mark" aria-hidden="true">SV</div>
+          <div className="sidebar-mark"><img src={iconoHoja} alt="" /></div>
           <div>
             <strong>VIVERO</strong>
             <span>MUNICIPAL</span>

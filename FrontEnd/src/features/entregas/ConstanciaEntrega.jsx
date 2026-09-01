@@ -1,3 +1,5 @@
+import iconoHoja from '../../assets/images/icono-hoja.png'
+
 function formatearFecha(fecha) {
   if (!fecha) return '—'
   const [year, month, day] = String(fecha).split('T')[0].split('-')
@@ -33,7 +35,7 @@ function ConstanciaEntrega({ entrega, impresion }) {
   return (
     <article className="constancia-entrega" aria-label="Constancia de entrega de plantas">
       <header className="constancia-header">
-        <p>Vivero Municipal</p>
+        <div className="constancia-brand"><img src={iconoHoja} alt="" /><p>Vivero Municipal</p></div>
         <h1>Constancia de Entrega de Plantas</h1>
       </header>
 

@@ -11,11 +11,13 @@ import EntregasView from './features/entregas/EntregasView'
 import ReportesView from './features/reportes/ReportesView'
 import Toast from './components/Toast'
 import ConfirmDialog from './components/ConfirmDialog'
+import iconoHoja from './assets/images/icono-hoja.png'
 import './App.css'
 
 function App() {
   const [usuario, setUsuario] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [authenticatedUser, setAuthenticatedUser] = useState(null)
@@ -129,6 +131,7 @@ function App() {
         await cerrarSesion()
         setAuthenticatedUser(null)
         setVistaActual('inicio')
+        setMessage('')
         setConfirmDialog(null)
         showToast('Sesión cerrada correctamente.', 'success')
       } catch (error) {
@@ -139,6 +142,7 @@ function App() {
     const handleSessionInvalid = () => {
       setAuthenticatedUser(null)
       setVistaActual('inicio')
+      setMessage('')
       showToast('La sesión ha expirado. Inicie sesión nuevamente.', 'warning')
     }
     const canViewReportes = ['ADMIN', 'VIVERO'].includes(authenticatedUser.rol?.codigo)
@@ -155,7 +159,7 @@ function App() {
               <p>Seleccione una opción del menú para comenzar.</p>
             </div>
             <section className="welcome-card" aria-label="Resumen de sesión">
-              <div className="welcome-card-mark" aria-hidden="true">SV</div>
+              <div className="welcome-card-mark"><img src={iconoHoja} alt="" /></div>
               <div>
                 <p className="card-kicker">Sesión activa</p>
                 <h2>Panel de trabajo preparado</h2>
@@ -173,8 +177,15 @@ function App() {
   return (
     <>
       <main className="login-shell">
+        <aside className="login-aside" aria-label="Información del sistema">
+          <div className="login-aside-content">
+            <div className="brand-mark"><img src="/src/assets/images/icono-hoja.png" alt="" /></div>
+            <p className="aside-kicker">VIVERO MUNICIPAL</p>
+            <p>Sistema de Gestión de Producción y Distribución de Plantas.</p>
+          </div>
+        </aside>
+
         <section className="login-panel" aria-labelledby="login-title">
-          <div className="brand-mark" aria-hidden="true">SV</div>
           <p className="eyebrow">Sistema Vivero Municipal</p>
           <h1 id="login-title">Bienvenido</h1>
           <p className="intro">Ingrese sus credenciales para continuar.</p>
@@ -183,19 +194,13 @@ function App() {
             <label htmlFor="usuario">Usuario o correo</label>
             <input id="usuario" name="usuario" type="text" autoComplete="username" placeholder="admin o correo@ejemplo.com" value={usuario} onChange={(event) => setUsuario(event.target.value)} disabled={loading} />
             <label htmlFor="password">Contraseña</label>
-            <input id="password" name="password" type="password" autoComplete="current-password" placeholder="Escribe tu contraseña" value={password} onChange={(event) => setPassword(event.target.value)} disabled={loading} />
+            <div className="password-field"><input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Escribe tu contraseña" value={password} onChange={(event) => setPassword(event.target.value)} disabled={loading} /><button type="button" className="password-toggle" onClick={() => setShowPassword((current) => !current)} disabled={loading} aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>{showPassword ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.7a2 2 0 0 0 2.7 2.7M9.9 5.1A10.7 10.7 0 0 1 12 5c5.5 0 9.2 4.5 10 7-0.3 0.9-1 2.2-2.1 3.4M6.2 6.2C4 7.7 2.6 10.1 2 12c0.8 2.5 4.5 7 10 7 1.3 0 2.5-0.2 3.5-0.7" /><circle cx="12" cy="12" r="3" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>}</button></div>
+            <a className="forgot-password" href="#recuperar-contrasena">¿Olvidaste tu contraseña?</a>
             <p className="form-message" role="status" aria-live="polite">{message}</p>
             <button type="submit" disabled={loading}>{loading ? 'Ingresando...' : 'Iniciar sesión'}</button>
           </form>
+          <p className="login-footer">© 2026 Vivero Municipal. Todos los derechos reservados.</p>
         </section>
-
-        <aside className="login-aside" aria-label="Información del sistema">
-          <div className="plant-symbol" aria-hidden="true">+</div>
-          <p className="aside-kicker">VIVERO MUNICIPAL</p>
-          <p>Sistema de Gestión de Producción y Distribución de Plantas</p>
-          <div className="aside-rule" />
-          <span>Gestión institucional</span>
-        </aside>
       </main>
       <Toast toast={toast} onClose={() => setToast(null)} />
     </>
