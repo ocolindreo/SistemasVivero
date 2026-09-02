@@ -1,8 +1,11 @@
 const mysql = require('mysql2/promise');
+const fs = require('fs');
 require('dotenv').config();
 
-// Crear un pool de conexiones a la base de datos
-const pool = mysql.createPool({
+const usarSSL = process.env.DB_SSL === 'true';
+
+// Configuración de conexión a la base de datos
+const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
@@ -11,7 +14,18 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
-});
+};
+
+// SSL para servicios remotos como Aiven
+if (usarSSL) {
+  dbConfig.ssl = {
+    rejectUnauthorized: true,
+    ca: fs.readFileSync(process.env.DB_SSL_CA, 'utf8')
+  };
+}
+
+// Crear un pool de conexiones a la base de datos
+const pool = mysql.createPool(dbConfig);
 
 // Probar la conexión al iniciar
 pool.getConnection()
