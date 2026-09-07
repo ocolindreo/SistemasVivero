@@ -1,6 +1,8 @@
 const bcrypt = require('bcrypt');
 const pool = require('../config/database');
 
+const ROLES_ADMINISTRAR_USUARIOS = new Set(['ADMIN', 'VIVERO']);
+
 async function registrarAuditoria({ connection, userId, action, recordId, previousData, newData, request, observation }) {
   await connection.execute(
     `INSERT INTO aud_auditorias (
@@ -28,8 +30,26 @@ async function registrarAuditoria({ connection, userId, action, recordId, previo
   );
 }
 
+function puedeAdministrarUsuarios(req, res) {
+  if (!ROLES_ADMINISTRAR_USUARIOS.has(req.usuario.rol_codigo)) {
+    res.status(403).json({
+      ok: false,
+      mensaje: 'No tiene permisos para realizar esta operación'
+    });
+    return false;
+  }
+  return true;
+}
+
+function puedeGestionarRol(req, rolCodigo) {
+  return req.usuario.rol_codigo === 'ADMIN' || rolCodigo !== 'ADMIN';
+}
+
 async function listarUsuarios(req, res) {
+  if (!puedeAdministrarUsuarios(req, res)) return;
+
   try {
+    const filtroAdmin = req.usuario.rol_codigo === 'ADMIN' ? '' : "AND r.rol_codigo <> 'ADMIN'";
     const [rows] = await pool.execute(
       `SELECT
         u.usu_id,
@@ -47,6 +67,7 @@ async function listarUsuarios(req, res) {
        INNER JOIN rol_roles r ON r.rol_id = u.usu_id_rol
       LEFT JOIN adm_visibilidad_registros adm ON adm.adm_modulo = 'USUARIO' AND adm.adm_id_registro = u.usu_id
       WHERE COALESCE(adm.adm_visible, 1) = 1
+        ${filtroAdmin}
        ORDER BY u.usu_apellidos, u.usu_nombres`
     );
 
@@ -80,6 +101,8 @@ async function listarUsuarios(req, res) {
 }
 
 async function obtenerUsuarioPorId(req, res) {
+  if (!puedeAdministrarUsuarios(req, res)) return;
+
   const { id } = req.params;
   const parsedId = Number(id);
 
@@ -120,6 +143,12 @@ async function obtenerUsuarioPorId(req, res) {
     }
 
     const usuario = rows[0];
+    if (!puedeGestionarRol(req, usuario.rol_codigo)) {
+      return res.status(403).json({
+        ok: false,
+        mensaje: 'No tiene permisos para consultar usuarios administradores'
+      });
+    }
 
     return res.status(200).json({
       ok: true,
@@ -150,12 +179,7 @@ async function obtenerUsuarioPorId(req, res) {
 }
 
 async function crearUsuario(req, res) {
-  if (req.usuario.rol_codigo !== 'ADMIN') {
-    return res.status(403).json({
-      ok: false,
-      mensaje: 'No tiene permisos para realizar esta operación'
-    });
-  }
+  if (!puedeAdministrarUsuarios(req, res)) return;
 
   const body = req.body || {};
   const { username, email, password, nombres, apellidos, telefono, rol_id: requestedRoleId } = body;
@@ -236,6 +260,14 @@ async function crearUsuario(req, res) {
     }
 
     const role = roles[0];
+    if (!puedeGestionarRol(req, role.rol_codigo)) {
+      await connection.rollback();
+      return res.status(403).json({
+        ok: false,
+        mensaje: 'No tiene permisos para asignar el rol ADMIN'
+      });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     const [result] = await connection.execute(
       `INSERT INTO usu_usuarios (
@@ -321,12 +353,7 @@ async function crearUsuario(req, res) {
 }
 
 async function actualizarUsuario(req, res) {
-  if (req.usuario.rol_codigo !== 'ADMIN') {
-    return res.status(403).json({
-      ok: false,
-      mensaje: 'No tiene permisos para realizar esta operación'
-    });
-  }
+  if (!puedeAdministrarUsuarios(req, res)) return;
 
   const { id } = req.params;
   const parsedId = Number(id);
@@ -352,9 +379,11 @@ async function actualizarUsuario(req, res) {
          usu_apellidos,
          usu_telefono,
          usu_id_rol,
+         r.rol_codigo,
          usu_estado
-       FROM usu_usuarios
-       WHERE usu_id = ?
+       FROM usu_usuarios u
+       INNER JOIN rol_roles r ON r.rol_id = u.usu_id_rol
+       WHERE u.usu_id = ?
        LIMIT 1`,
       [parsedId]
     );
@@ -368,6 +397,14 @@ async function actualizarUsuario(req, res) {
     }
 
     const currentUser = users[0];
+    if (!puedeGestionarRol(req, currentUser.rol_codigo)) {
+      await connection.rollback();
+      return res.status(403).json({
+        ok: false,
+        mensaje: 'No tiene permisos para modificar usuarios administradores'
+      });
+    }
+
     const body = req.body || {};
 
     if (Object.prototype.hasOwnProperty.call(body, 'password')) {
@@ -461,6 +498,14 @@ async function actualizarUsuario(req, res) {
     }
 
     const role = roles[0];
+    if (!puedeGestionarRol(req, role.rol_codigo)) {
+      await connection.rollback();
+      return res.status(403).json({
+        ok: false,
+        mensaje: 'No tiene permisos para asignar el rol ADMIN'
+      });
+    }
+
     await connection.execute(
       `UPDATE usu_usuarios
        SET
@@ -552,12 +597,7 @@ async function actualizarUsuario(req, res) {
 }
 
 async function inactivarUsuario(req, res) {
-  if (req.usuario.rol_codigo !== 'ADMIN') {
-    return res.status(403).json({
-      ok: false,
-      mensaje: 'No tiene permisos para realizar esta operación'
-    });
-  }
+  if (!puedeAdministrarUsuarios(req, res)) return;
 
   const { id } = req.params;
   const parsedId = Number(id);
@@ -575,9 +615,10 @@ async function inactivarUsuario(req, res) {
     await connection.beginTransaction();
 
     const [users] = await connection.execute(
-      `SELECT usu_id, usu_estado
-       FROM usu_usuarios
-       WHERE usu_id = ?
+      `SELECT u.usu_id, u.usu_estado, r.rol_codigo
+       FROM usu_usuarios u
+       INNER JOIN rol_roles r ON r.rol_id = u.usu_id_rol
+       WHERE u.usu_id = ?
        LIMIT 1`,
       [parsedId]
     );
@@ -587,6 +628,14 @@ async function inactivarUsuario(req, res) {
       return res.status(404).json({
         ok: false,
         mensaje: 'Usuario no encontrado'
+      });
+    }
+
+    if (!puedeGestionarRol(req, users[0].rol_codigo)) {
+      await connection.rollback();
+      return res.status(403).json({
+        ok: false,
+        mensaje: 'No tiene permisos para inactivar usuarios administradores'
       });
     }
 
@@ -652,12 +701,7 @@ async function inactivarUsuario(req, res) {
 }
 
 async function reactivarUsuario(req, res) {
-  if (req.usuario.rol_codigo !== 'ADMIN') {
-    return res.status(403).json({
-      ok: false,
-      mensaje: 'No tiene permisos para realizar esta operación'
-    });
-  }
+  if (!puedeAdministrarUsuarios(req, res)) return;
 
   const { id } = req.params;
   const parsedId = Number(id);
@@ -675,9 +719,10 @@ async function reactivarUsuario(req, res) {
     await connection.beginTransaction();
 
     const [users] = await connection.execute(
-      `SELECT usu_id, usu_estado
-       FROM usu_usuarios
-       WHERE usu_id = ?
+      `SELECT u.usu_id, u.usu_estado, r.rol_codigo
+       FROM usu_usuarios u
+       INNER JOIN rol_roles r ON r.rol_id = u.usu_id_rol
+       WHERE u.usu_id = ?
        LIMIT 1`,
       [parsedId]
     );
@@ -687,6 +732,14 @@ async function reactivarUsuario(req, res) {
       return res.status(404).json({
         ok: false,
         mensaje: 'Usuario no encontrado'
+      });
+    }
+
+    if (!puedeGestionarRol(req, users[0].rol_codigo)) {
+      await connection.rollback();
+      return res.status(403).json({
+        ok: false,
+        mensaje: 'No tiene permisos para reactivar usuarios administradores'
       });
     }
 

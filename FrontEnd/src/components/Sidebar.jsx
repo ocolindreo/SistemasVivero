@@ -2,7 +2,7 @@ import iconoHoja from '../assets/images/icono-hoja.png'
 
 const navigationItems = [
   { label: 'Inicio', view: 'inicio', available: true },
-  { label: 'Seguridad y Usuarios', view: 'usuarios', available: true },
+  { label: 'Seguridad y Usuarios', view: 'usuarios', available: true, roles: ['ADMIN', 'VIVERO'] },
   { label: 'Catálogos', view: 'catalogos', available: true },
   { label: 'Producción', view: 'produccion', available: true },
   { label: 'Inventario', view: 'inventario', available: true },
