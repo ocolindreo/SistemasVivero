@@ -576,7 +576,7 @@ async function listarResponsablesProduccion(req, res) {
        INNER JOIN rol_roles r ON r.rol_id = u.usu_id_rol
        WHERE u.usu_estado = 1
          AND r.rol_estado = 1
-         AND r.rol_codigo IN ('ADMIN', 'VIVERO')
+         AND r.rol_codigo = 'VIVERO'
        ORDER BY u.usu_apellidos, u.usu_nombres`
     );
 
