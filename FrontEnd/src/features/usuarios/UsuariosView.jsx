@@ -3,7 +3,7 @@ import Modal from '../../components/Modal'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import StatusBadge from '../../components/StatusBadge'
 import DataTable from '../../components/DataTable'
-import { crearUsuario, editarUsuario, obtenerRoles, obtenerUsuarios, inactivarUsuario, reactivarUsuario } from '../../services/api'
+import { crearUsuario, desbloquearUsuario, editarUsuario, obtenerRoles, obtenerUsuarios, inactivarUsuario, reactivarUsuario } from '../../services/api'
 
 const emptyForm = { username: '', email: '', nombres: '', apellidos: '', telefono: '', rol_id: '', password: '' }
 
@@ -45,17 +45,19 @@ function UsuariosView({ currentUser, onToast, onSessionInvalid }) {
     { key: 'email', label: 'Correo', sortable: true },
     { key: 'rol.nombre', label: 'Rol', sortable: true },
     { key: 'estado', label: 'Estado', sortable: true, sortValue: (user) => user.estado, render: (user) => <StatusBadge active={user.estado === 1} /> },
+    { key: 'bloqueo_administrativo', label: 'Acceso', sortable: true, render: (user) => user.bloqueo_administrativo === 1 ? <span className="status-badge status-inactive">Bloqueada</span> : user.intentos_fallidos > 0 ? <span className="action-note">{user.intentos_fallidos} fallo(s)</span> : <span className="status-badge status-active">Disponible</span> },
     {
       key: 'acciones',
       label: 'Acciones',
       sortable: false,
       className: 'row-actions',
-      render: (user) => <><button className="text-button" onClick={() => setModal({ user })}>Editar</button>{user.id === currentUser.id ? <span className="action-note">No puede inactivarse</span> : <button className="text-button" onClick={() => changeStatus(user)}>{user.estado ? 'Inactivar' : 'Reactivar'}</button>}</>,
+      render: (user) => <><button className="text-button" onClick={() => setModal({ user })}>Editar</button>{user.id === currentUser.id ? <span className="action-note">No puede inactivarse</span> : <button className="text-button" onClick={() => changeStatus(user)}>{user.estado ? 'Inactivar' : 'Reactivar'}</button>}{currentUser.rol.codigo === 'ADMIN' && (user.bloqueo_administrativo === 1 || user.intentos_fallidos > 0) && <button className="text-button" onClick={() => requestUnlock(user)}>Desbloquear</button>}</>,
     },
   ]
   const save = async (data) => { try { setSaving(true); if (modal.user) { const { username, email, nombres, apellidos, telefono, rol_id } = data; await editarUsuario(modal.user.id, { username, email, nombres, apellidos, telefono, rol_id: Number(rol_id) }); onToast('Usuario actualizado correctamente', 'success') } else { await crearUsuario({ ...data, rol_id: Number(data.rol_id) }); onToast('Usuario creado correctamente', 'success') } setModal(null); await load() } catch (error) { if (error.status === 401 || error.status === 403) onSessionInvalid(); else onToast(error.message, 'error') } finally { setSaving(false) } }
   const changeStatus = (user) => setConfirmDialog({ user, action: user.estado ? inactivarUsuario : reactivarUsuario, title: user.estado ? 'Inactivar usuario' : 'Reactivar usuario', message: `¿Desea ${user.estado ? 'inactivar' : 'reactivar'} al usuario ${user.username}?`, confirmLabel: user.estado ? 'Inactivar' : 'Reactivar', danger: user.estado })
-  const confirmStatus = async () => { const { user, action } = confirmDialog; setConfirmDialog((current) => ({ ...current, loading: true })); try { await action(user.id); setConfirmDialog(null); await load(); onToast(`Usuario ${user.estado ? 'inactivado' : 'reactivado'} correctamente`, 'success') } catch (error) { setConfirmDialog(null); if (error.status === 401 || error.status === 403) onSessionInvalid(); else onToast(error.message, 'error') } }
+  const requestUnlock = (user) => setConfirmDialog({ user, action: desbloquearUsuario, title: 'Desbloquear cuenta', message: `¿Desea reiniciar los intentos fallidos y desbloquear la cuenta de ${user.username}?`, confirmLabel: 'Desbloquear', successMessage: 'Cuenta desbloqueada correctamente' })
+  const confirmStatus = async () => { const { user, action, successMessage } = confirmDialog; setConfirmDialog((current) => ({ ...current, loading: true })); try { await action(user.id); setConfirmDialog(null); await load(); onToast(successMessage || `Usuario ${user.estado ? 'inactivado' : 'reactivado'} correctamente`, 'success') } catch (error) { setConfirmDialog(null); if (error.status === 401) onSessionInvalid(); else onToast(error.message, 'error') } }
   return <section className="users-view" aria-labelledby="users-title">
     <div className="users-header"><div><span className="page-kicker">Seguridad y Usuarios</span><h1 id="users-title">Usuarios</h1><p>Administración de usuarios y accesos del sistema.</p></div>{canManageUsers && <button onClick={() => setModal({ user: null })}>+ Nuevo Usuario</button>}</div>
     {message && <p className="users-alert">{message}</p>}

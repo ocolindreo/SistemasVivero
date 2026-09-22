@@ -20,6 +20,7 @@ function App() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [lockSeconds, setLockSeconds] = useState(0)
   const [message, setMessage] = useState('')
   const [authenticatedUser, setAuthenticatedUser] = useState(null)
   const [verificandoSesion, setVerificandoSesion] = useState(true)
@@ -31,6 +32,11 @@ function App() {
   function showToast(message, type = 'info') {
     setToast({ message, type })
   }
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setLockSeconds((seconds) => Math.max(0, seconds - 1)), 1000)
+    return () => window.clearInterval(intervalId)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -109,6 +115,9 @@ function App() {
       setPassword('')
       setMessage('Sesión iniciada correctamente')
     } catch (error) {
+      if (error.codigo === 'BLOQUEO_TEMPORAL' && Number(error.reintentarEnSegundos) > 0) {
+        setLockSeconds(Math.ceil(Number(error.reintentarEnSegundos)))
+      }
       setMessage(error.message)
     } finally {
       setLoading(false)
@@ -177,6 +186,8 @@ function App() {
     )
   }
 
+  const lockTime = `${String(Math.floor(lockSeconds / 60)).padStart(2, '0')}:${String(lockSeconds % 60).padStart(2, '0')}`
+
   return (
     <>
       <main className="login-shell">
@@ -199,8 +210,8 @@ function App() {
             <label htmlFor="password">Contraseña</label>
             <div className="password-field"><input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Escribe tu contraseña" value={password} onChange={(event) => setPassword(event.target.value)} disabled={loading} /><button type="button" className="password-toggle" onClick={() => setShowPassword((current) => !current)} disabled={loading} aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>{showPassword ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.7a2 2 0 0 0 2.7 2.7M9.9 5.1A10.7 10.7 0 0 1 12 5c5.5 0 9.2 4.5 10 7-0.3 0.9-1 2.2-2.1 3.4M6.2 6.2C4 7.7 2.6 10.1 2 12c0.8 2.5 4.5 7 10 7 1.3 0 2.5-0.2 3.5-0.7" /><circle cx="12" cy="12" r="3" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>}</button></div>
             <a className="forgot-password" href="#recuperar-contrasena">¿Olvidaste tu contraseña?</a>
-            <p className="form-message" role="status" aria-live="polite">{message}</p>
-            <button type="submit" disabled={loading}>{loading ? 'Ingresando...' : 'Iniciar sesión'}</button>
+            <p className="form-message" role="status" aria-live="polite">{lockSeconds > 0 ? `Por seguridad, debe esperar ${lockTime} antes de realizar otro intento.` : message}</p>
+            <button type="submit" disabled={loading || lockSeconds > 0}>{loading ? 'Ingresando...' : 'Iniciar sesión'}</button>
           </form>
           <p className="login-footer">© 2026 Vivero Municipal. Todos los derechos reservados.</p>
         </section>

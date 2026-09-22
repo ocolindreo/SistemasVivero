@@ -38,6 +38,8 @@ export async function login(usuario, password) {
   if (!response.ok) {
     const error = new Error(data?.mensaje || 'No fue posible iniciar sesión')
     error.status = response.status
+    error.codigo = data?.codigo
+    error.reintentarEnSegundos = data?.reintentar_en_segundos
     throw error
   }
 
@@ -79,6 +81,7 @@ export const crearUsuario = (datos) => request('/api/usuarios', { method: 'POST'
 export const editarUsuario = (id, datos) => request(`/api/usuarios/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
 export const inactivarUsuario = (id) => request(`/api/usuarios/${id}/inactivar`, { method: 'PATCH' })
 export const reactivarUsuario = (id) => request(`/api/usuarios/${id}/reactivar`, { method: 'PATCH' })
+export const desbloquearUsuario = (id) => request(`/api/usuarios/${id}/desbloquear`, { method: 'PATCH' })
 export const cerrarSesion = () => request('/api/auth/logout', { method: 'POST' })
 
 export const obtenerEspecies = () => request('/api/especies')

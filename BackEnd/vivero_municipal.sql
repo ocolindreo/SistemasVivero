@@ -46,6 +46,12 @@ CREATE TABLE IF NOT EXISTS usu_usuarios (
     usu_id_rol INT NOT NULL,
     usu_estado TINYINT NOT NULL DEFAULT 1 COMMENT '1=Activo, 0=Inactivo',
     usu_fecha_ultimo_login DATETIME,
+    usu_intentos_fallidos TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    usu_fecha_ultimo_intento_fallido DATETIME,
+    usu_bloqueado_hasta DATETIME,
+    usu_bloqueo_administrativo TINYINT(1) NOT NULL DEFAULT 0,
+    usu_fecha_desbloqueo DATETIME,
+    usu_id_usuario_desbloqueo INT,
     usu_fecha_inactivacion DATETIME,
     usu_id_usuario_inactivacion INT,
     usu_fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -65,7 +71,8 @@ CREATE TABLE IF NOT EXISTS usu_usuarios (
 ALTER TABLE usu_usuarios 
 ADD CONSTRAINT fk_usu_creador FOREIGN KEY (usu_id_usuario_creacion) REFERENCES usu_usuarios(usu_id),
 ADD CONSTRAINT fk_usu_modificador FOREIGN KEY (usu_id_usuario_modificacion) REFERENCES usu_usuarios(usu_id),
-ADD CONSTRAINT fk_usu_inactivador FOREIGN KEY (usu_id_usuario_inactivacion) REFERENCES usu_usuarios(usu_id);
+ADD CONSTRAINT fk_usu_inactivador FOREIGN KEY (usu_id_usuario_inactivacion) REFERENCES usu_usuarios(usu_id),
+ADD CONSTRAINT fk_usu_desbloqueador FOREIGN KEY (usu_id_usuario_desbloqueo) REFERENCES usu_usuarios(usu_id);
 
 -- Agregar FK a rol_roles para usuario creador/modificador
 ALTER TABLE rol_roles 

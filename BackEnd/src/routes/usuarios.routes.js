@@ -6,7 +6,8 @@ const {
 	crearUsuario,
 	actualizarUsuario,
 	inactivarUsuario,
-	reactivarUsuario
+	reactivarUsuario,
+	desbloquearUsuario
 } = require('../controllers/usuarios.controller');
 
 const router = express.Router();
@@ -17,5 +18,6 @@ router.post('/', autenticarJWT, crearUsuario);
 router.put('/:id', autenticarJWT, actualizarUsuario);
 router.patch('/:id/inactivar', autenticarJWT, inactivarUsuario);
 router.patch('/:id/reactivar', autenticarJWT, reactivarUsuario);
+router.patch('/:id/desbloquear', autenticarJWT, desbloquearUsuario);
 
 module.exports = router;

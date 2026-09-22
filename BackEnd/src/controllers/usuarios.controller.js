@@ -60,6 +60,9 @@ async function listarUsuarios(req, res) {
         u.usu_telefono,
         u.usu_estado,
         u.usu_fecha_ultimo_login,
+        u.usu_intentos_fallidos,
+        u.usu_bloqueado_hasta,
+        u.usu_bloqueo_administrativo,
         r.rol_id,
         r.rol_codigo,
         r.rol_nombre
@@ -80,6 +83,9 @@ async function listarUsuarios(req, res) {
       telefono: usuario.usu_telefono,
       estado: usuario.usu_estado,
       fecha_ultimo_login: usuario.usu_fecha_ultimo_login,
+      intentos_fallidos: usuario.usu_intentos_fallidos,
+      bloqueado_hasta: usuario.usu_bloqueado_hasta,
+      bloqueo_administrativo: usuario.usu_bloqueo_administrativo,
       rol: {
         id: usuario.rol_id,
         codigo: usuario.rol_codigo,
@@ -796,11 +802,94 @@ async function reactivarUsuario(req, res) {
   }
 }
 
+async function desbloquearUsuario(req, res) {
+  const { id } = req.params;
+  const parsedId = Number(id);
+
+  if (!/^\d+$/.test(id) || !Number.isSafeInteger(parsedId) || parsedId <= 0) {
+    return res.status(400).json({ ok: false, mensaje: 'El id debe ser un entero positivo' });
+  }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // El permiso se consulta en la base de datos; no se confía únicamente en el rol del JWT.
+    const [actors] = await connection.execute(
+      `SELECT u.usu_id
+       FROM usu_usuarios u
+       INNER JOIN rol_roles r ON r.rol_id = u.usu_id_rol
+       WHERE u.usu_id = ? AND u.usu_estado = 1 AND r.rol_estado = 1 AND r.rol_codigo = 'ADMIN'
+       LIMIT 1`,
+      [req.usuario.usu_id]
+    );
+    if (actors.length === 0) {
+      await connection.rollback();
+      return res.status(403).json({ ok: false, mensaje: 'No tiene permisos para desbloquear cuentas' });
+    }
+
+    const [users] = await connection.execute(
+      `SELECT usu_id, usu_intentos_fallidos, usu_bloqueado_hasta, usu_bloqueo_administrativo
+       FROM usu_usuarios WHERE usu_id = ? LIMIT 1 FOR UPDATE`,
+      [parsedId]
+    );
+    if (users.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ ok: false, mensaje: 'Usuario no encontrado' });
+    }
+
+    const user = users[0];
+    if (Number(user.usu_intentos_fallidos) === 0 && !user.usu_bloqueado_hasta && user.usu_bloqueo_administrativo !== 1) {
+      await connection.rollback();
+      return res.status(409).json({ ok: false, mensaje: 'La cuenta no tiene bloqueos ni intentos fallidos pendientes' });
+    }
+
+    await connection.execute(
+      `UPDATE usu_usuarios
+       SET usu_intentos_fallidos = 0,
+           usu_fecha_ultimo_intento_fallido = NULL,
+           usu_bloqueado_hasta = NULL,
+           usu_bloqueo_administrativo = 0,
+           usu_fecha_desbloqueo = CURRENT_TIMESTAMP,
+           usu_id_usuario_desbloqueo = ?,
+           usu_fecha_modificacion = CURRENT_TIMESTAMP,
+           usu_id_usuario_modificacion = ?
+       WHERE usu_id = ?`,
+      [req.usuario.usu_id, req.usuario.usu_id, parsedId]
+    );
+
+    await registrarAuditoria({
+      connection,
+      userId: req.usuario.usu_id,
+      action: 'DESBLOQUEO_ADMIN',
+      recordId: parsedId,
+      previousData: {
+        intentos_fallidos: Number(user.usu_intentos_fallidos),
+        bloqueado_hasta: user.usu_bloqueado_hasta,
+        bloqueo_administrativo: user.usu_bloqueo_administrativo
+      },
+      newData: { intentos_fallidos: 0, bloqueado_hasta: null, bloqueo_administrativo: 0 },
+      request: req,
+      observation: `Cuenta desbloqueada por el administrador ${req.usuario.usu_username}`
+    });
+
+    await connection.commit();
+    return res.status(200).json({ ok: true, mensaje: 'Cuenta desbloqueada correctamente' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error al desbloquear usuario:', error.message);
+    return res.status(500).json({ ok: false, mensaje: 'Error interno del servidor' });
+  } finally {
+    connection.release();
+  }
+}
+
 module.exports = {
   listarUsuarios,
   obtenerUsuarioPorId,
   crearUsuario,
   actualizarUsuario,
   inactivarUsuario,
-  reactivarUsuario
+  reactivarUsuario,
+  desbloquearUsuario
 };
